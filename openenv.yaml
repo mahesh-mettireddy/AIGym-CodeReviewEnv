@@ -20,19 +20,19 @@ tasks:
     difficulty: easy
     description: Identify whether a Python code snippet contains a bug
     reward_range: [0.01, 0.99]
-    grader: server.my_first_env_environment.CodeReviewEnvironment
+    grader: server.graders.BugDetectionGrader
 
   - name: code_smell
     difficulty: medium
     description: Identify the code smell or bad practice in a snippet
     reward_range: [0.01, 0.99]
-    grader: server.my_first_env_environment.CodeReviewEnvironment
+    grader: server.graders.CodeSmellGrader
 
   - name: improvement
     difficulty: hard
     description: Suggest a specific improvement to the code with reasoning
     reward_range: [0.01, 0.99]
-    grader: server.my_first_env_environment.CodeReviewEnvironment
+    grader: server.graders.ImprovementGrader
 
 action_space:
   type: CodeReviewAction
