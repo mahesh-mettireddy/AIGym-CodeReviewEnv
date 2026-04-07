@@ -17,7 +17,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
     staging = Path(tmpdir) / 'staging'
 
     def ignore(d, names):
-        return {n for n in names if n in ('__pycache__', '.git', '.idea', 'uv.lock', '_upload_hf.py')}
+        return {n for n in names if n in ('__pycache__', '.git', '.idea', '_upload_hf.py')}
 
     shutil.copytree(env_dir, staging, ignore=ignore)
 
