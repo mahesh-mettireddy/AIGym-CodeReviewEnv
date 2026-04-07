@@ -5,9 +5,9 @@
 # LICENSE file in the root directory of this source tree.
 
 """
-FastAPI application for the My First Env Environment.
+FastAPI application for the Code Review Environment.
 
-This module creates an HTTP server that exposes the MyFirstEnvironment
+This module creates an HTTP server that exposes the CodeReviewEnvironment
 over HTTP and WebSocket endpoints, compatible with EnvClient.
 
 Endpoints:
@@ -42,15 +42,15 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
     from ..models import CodeReviewAction, CodeReviewObservation
-    from .my_first_env_environment import MyFirstEnvironment
+    from .my_first_env_environment import CodeReviewEnvironment
 except (ImportError, ModuleNotFoundError):
     from models import CodeReviewAction, CodeReviewObservation
-    from server.my_first_env_environment import MyFirstEnvironment
+    from server.my_first_env_environment import CodeReviewEnvironment
 
 
 # Create the app with web interface and README integration
 app = create_app(
-    MyFirstEnvironment,
+    CodeReviewEnvironment,
     CodeReviewAction,
     CodeReviewObservation,
     env_name="code_review_env",

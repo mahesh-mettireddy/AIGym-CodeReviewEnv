@@ -6,6 +6,6 @@
 
 """My First Env environment server components."""
 
-from .my_first_env_environment import MyFirstEnvironment
+from .my_first_env_environment import CodeReviewEnvironment
 
-__all__ = ["MyFirstEnvironment"]
+__all__ = ["CodeReviewEnvironment"]

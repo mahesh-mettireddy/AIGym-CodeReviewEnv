@@ -3,7 +3,6 @@ import sys
 import textwrap
 from openai import OpenAI
 
-# Ensure local imports work
 sys.path.insert(0, os.path.dirname(__file__))
 
 from models import CodeReviewAction, CodeReviewObservation
@@ -20,19 +19,19 @@ SYSTEM_PROMPT = textwrap.dedent("""
     Do not explain yourself — just give your verdict.
 """).strip()
 
-TASKS = ["bug_detection", "code_smell", "improvement"]
 
+def main():
+    from server.my_first_env_environment import CodeReviewEnvironment
 
-def run_episode(env, task_name: str):
     client = OpenAI(api_key=API_KEY, base_url=API_BASE_URL)
+    env = CodeReviewEnvironment()
 
     obs = env.reset()
     done = False
     step = 0
     rewards = []
-    total_score = 0.0
 
-    print(f"[START] task={task_name} env={BENCHMARK} model={MODEL_NAME}")
+    print(f"[START] task=all_tasks env={BENCHMARK} model={MODEL_NAME}")
 
     while not done:
         step += 1
@@ -44,17 +43,21 @@ Code:
 
 Give your verdict:"""
 
-        response = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=200,
-            temperature=0.2
-        )
-
-        verdict = response.choices[0].message.content.strip()
+        try:
+            response = client.chat.completions.create(
+                model=MODEL_NAME,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=200,
+                temperature=0.2
+            )
+            verdict = response.choices[0].message.content.strip()
+            error_str = "null"
+        except Exception as e:
+            verdict = "no verdict"
+            error_str = str(e)[:80]
 
         action = CodeReviewAction(
             task=obs.task,
@@ -66,28 +69,13 @@ Give your verdict:"""
         reward = obs.last_reward
         done = obs.done
         rewards.append(reward)
-        total_score = obs.score
 
-        print(f"[STEP] step={step} action={repr(verdict[:80])} reward={reward:.2f} done={str(done).lower()} error=null")
+        print(f"[STEP] step={step} action={repr(verdict[:80])} reward={reward:.2f} done={str(done).lower()} error={error_str}")
 
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
-    success = total_score > 0
-    print(f"[END] success={str(success).lower()} steps={step} score={total_score:.2f} rewards={rewards_str}")
-    return total_score
-
-
-def main():
-    from server.my_first_env_environment import MyFirstEnvironment
-
-    env = MyFirstEnvironment()
-    total = 0.0
-
-    for task in TASKS:
-        print(f"\n--- Running task: {task} ---")
-        score = run_episode(env, task)
-        total += score
-
-    print(f"\n=== FINAL SCORE: {total:.2f} / {len(TASKS)}.0 ===")
+    total = sum(rewards)
+    success = total > 0
+    print(f"[END] success={str(success).lower()} steps={step} score={total:.2f} rewards={rewards_str}")
 
 
 if __name__ == "__main__":

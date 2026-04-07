@@ -5,13 +5,14 @@ description: >
   Tasks range from bug detection (easy) to improvement suggestions (hard).
 author: mahesh16
 tags:
+  - openenv
   - code-review
   - software-engineering
   - real-world
   - python
 
 environment:
-  class: MyFirstEnvironment
+  class: CodeReviewEnvironment
   module: server.my_first_env_environment
 
 tasks:

@@ -51,6 +51,30 @@ print(add(3, 4))
                 "keywords": ["no bug", "correct", "no error", "works", "fine", "no issue"],
                 "explanation": "No bug — simple addition works fine"
             },
+            {
+                "code": """
+def get_value(d, key):
+    return d[key]
+
+data = {"name": "Alice"}
+print(get_value(data, "age"))
+""",
+                "has_bug": True,
+                "keywords": ["key", "keyerror", "missing", "not found", "dict"],
+                "explanation": "KeyError — 'age' key doesn't exist in the dict"
+            },
+            {
+                "code": """
+numbers = [1, 2, 3, 4, 5]
+total = 0
+for i in range(1, len(numbers) + 1):
+    total += numbers[i]
+print(total)
+""",
+                "has_bug": True,
+                "keywords": ["index", "off by one", "range", "indexerror", "out of range"],
+                "explanation": "Off-by-one error — range goes to len(numbers) but max valid index is len-1"
+            },
         ]
     },
 
@@ -88,6 +112,25 @@ def get_user_data(id, name, email, age, address, phone, country):
                 "smells": ["too many", "parameters", "arguments", "long parameter", "data class", "object"],
                 "explanation": "Too many parameters — should use a data class or object"
             },
+            {
+                "code": """
+def check_user(u):
+    if u == 1:
+        return True
+    return False
+""",
+                "smells": ["single letter", "variable name", "naming", "unclear", "descriptive"],
+                "explanation": "Poor variable naming — 'u' is not descriptive, should be 'user_id'"
+            },
+            {
+                "code": """
+result = []
+for item in range(10):
+    result.append(item * item)
+""",
+                "smells": ["list comprehension", "comprehension", "pythonic", "append", "loop"],
+                "explanation": "Should use list comprehension: [item*item for item in range(10)]"
+            },
         ]
     },
 
@@ -124,13 +167,37 @@ def celsius_to_fahrenheit(c):
                 "improvements": ["docstring", "type hint", "annotation", "return type", "documentation"],
                 "explanation": "Missing type hints and docstring — add them for clarity"
             },
+            {
+                "code": """
+def read_file(path):
+    f = open(path)
+    data = f.read()
+    f.close()
+    return data
+""",
+                "improvements": ["with", "context manager", "with open", "close", "resource"],
+                "explanation": "Use 'with open()' context manager to ensure file is always closed"
+            },
+            {
+                "code": """
+import time
+def retry(func):
+    for i in range(3):
+        try:
+            return func()
+        except:
+            time.sleep(1)
+""",
+                "improvements": ["bare except", "exception type", "specific exception", "logging", "backoff"],
+                "explanation": "Bare except hides errors — catch specific exceptions and add logging"
+            },
         ]
     }
 }
 
 import random
 
-class MyFirstEnvironment(Environment):
+class CodeReviewEnvironment(Environment):
     """
     CodeReviewEnv — teaches AI agents to review Python code.
     3 tasks: bug detection (easy), code smell (medium), improvement suggestion (hard).
@@ -146,7 +213,6 @@ class MyFirstEnvironment(Environment):
         self._total_score = 0.0
         self._task_index = 0
         # Auto-load first task so env is valid even without explicit reset
-        self._load_task(0)
 
     def reset(self) -> CodeReviewObservation:
         self._state = State(episode_id=str(uuid4()), step_count=0)
@@ -199,12 +265,16 @@ class MyFirstEnvironment(Environment):
             next_obs.feedback = feedback
             return next_obs
 
+    def _normalize(self, text: str) -> str:
+        import re
+        return re.sub(r'[^\w\s]', ' ', text.lower()).strip()
+
     def _grade(self, action: CodeReviewAction) -> float:
         """
         The grader — scores agent's verdict against known answers.
         This is the core of the environment.
         """
-        verdict = action.verdict.lower().strip()
+        verdict = self._normalize(action.verdict)
         task = self._current_task
         snippet = self._current_snippet
 

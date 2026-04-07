@@ -1,6 +1,5 @@
 from openenv.core.env_server.types import Action, Observation
 from pydantic import Field
-from typing import Optional
 
 class CodeReviewAction(Action):
     """What the agent sends — its review decision."""
