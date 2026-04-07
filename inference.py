@@ -7,9 +7,9 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from models import CodeReviewAction, CodeReviewObservation
 
-API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+HF_TOKEN = os.getenv("HF_TOKEN")
 BENCHMARK = "code_review_env"
 
 SYSTEM_PROMPT = textwrap.dedent("""
@@ -23,7 +23,7 @@ SYSTEM_PROMPT = textwrap.dedent("""
 def main():
     from server.my_first_env_environment import CodeReviewEnvironment
 
-    client = OpenAI(api_key=API_KEY, base_url=API_BASE_URL)
+    client = OpenAI(api_key=HF_TOKEN, base_url=API_BASE_URL)
     env = CodeReviewEnvironment()
 
     obs = env.reset()
