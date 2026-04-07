@@ -2,10 +2,15 @@ from uuid import uuid4
 from openenv.core.env_server.interfaces import Environment
 from openenv.core.env_server.types import State
 
-try:
-    from ..models import CodeReviewAction, CodeReviewObservation
-except (ImportError, ModuleNotFoundError):
-    from models import CodeReviewAction, CodeReviewObservation
+import sys
+import os
+
+# Robustly ensure the project root is in sys.path for headless evaluator imports
+_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _root not in sys.path:
+    sys.path.insert(0, _root)
+
+from models import CodeReviewAction, CodeReviewObservation
 
 # -------------------------------------------------------
 # TASK BANK
