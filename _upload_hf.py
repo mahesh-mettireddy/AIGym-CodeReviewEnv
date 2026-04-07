@@ -50,16 +50,16 @@ ENV PYTHONPATH="/app:$PYTHONPATH"
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \\
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:7860/health || exit 1
 
-# Expose port 8000
-EXPOSE 8000
+# Expose port 7860
+EXPOSE 7860
 
 # Enable web interface
 ENV ENABLE_WEB_INTERFACE=true
 
 # Run the FastAPI server
-CMD ["python", "-c", "import uvicorn; uvicorn.run('server.app:app', host='0.0.0.0', port=8000)"]
+CMD ["python", "-c", "import uvicorn; uvicorn.run('server.app:app', host='0.0.0.0', port=7860)"]
 """
     dst_df.write_text(dockerfile_content)
     print('Wrote clean Dockerfile', flush=True)
@@ -77,7 +77,7 @@ CMD ["python", "-c", "import uvicorn; uvicorn.run('server.app:app', host='0.0.0.
                 "colorTo: purple\n"
                 "sdk: docker\n"
                 "pinned: false\n"
-                "app_port: 8000\n"
+                "app_port: 7860\n"
                 "base_path: /web\n"
                 "tags:\n"
                 "  - openenv\n"
