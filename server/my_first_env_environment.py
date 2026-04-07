@@ -292,44 +292,44 @@ class CodeReviewEnvironment(Environment):
                 # Check if they explained it correctly
                 for kw in snippet["keywords"]:
                     if kw in verdict:
-                        return 1.0       # correct + good explanation
+                        return 0.99      # correct + good explanation
                 return 0.6              # correct verdict, weak explanation
 
             elif not has_bug and said_no:
-                return 1.0              # correctly identified no bug
+                return 0.99             # correctly identified no bug
 
             elif has_bug and said_no:
-                return 0.0              # missed the bug
+                return 0.01             # missed the bug
 
             elif not has_bug and said_yes:
-                return 0.0              # false positive
+                return 0.01             # false positive
 
             return 0.1                  # didn't say yes or no clearly
 
         elif task == "code_smell":
             for smell in snippet["smells"]:
                 if smell in verdict:
-                    return 1.0          # identified the smell correctly
+                    return 0.99         # identified the smell correctly
             # Partial credit if answer is long and relevant
             if len(verdict) > 20:
                 return 0.3
-            return 0.0
+            return 0.01
 
         elif task == "improvement":
             for imp in snippet["improvements"]:
                 if imp in verdict:
-                    return 1.0          # suggested the right improvement
+                    return 0.99         # suggested the right improvement
             if len(verdict) > 30:
                 return 0.4              # suggested something, just not ideal
-            return 0.0
+            return 0.01
 
-        return 0.0
+        return 0.01
 
     def _get_feedback(self, action: CodeReviewAction, reward: float) -> str:
         snippet = self._current_snippet
-        if reward >= 1.0:
+        if reward >= 0.99:
             return "Correct! " + snippet.get("explanation", "")
-        elif reward > 0.0:
+        elif reward > 0.01:
             return "Partially correct. " + snippet.get("explanation", "")
         else:
             return "Incorrect. " + snippet.get("explanation", "")
