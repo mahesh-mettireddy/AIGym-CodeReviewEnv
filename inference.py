@@ -73,9 +73,10 @@ Give your verdict:"""
         print(f"[STEP] step={step} action={repr(verdict[:80])} reward={reward:.2f} done={str(done).lower()} error={error_str}")
 
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
-    total = sum(rewards)
-    success = total > 0
-    print(f"[END] success={str(success).lower()} steps={step} score={total:.2f} rewards={rewards_str}")
+    total_raw = sum(rewards)
+    total_normalized = total_raw / len(rewards) if rewards else 0.0
+    success = total_raw > 0
+    print(f"[END] success={str(success).lower()} steps={step} score={total_normalized:.2f} rewards={rewards_str}")
 
 
 if __name__ == "__main__":
