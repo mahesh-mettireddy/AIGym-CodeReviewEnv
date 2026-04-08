@@ -31,10 +31,9 @@ def main():
     step = 0
     rewards = []
 
-    print(f"[START] task=all_tasks env={BENCHMARK} model={MODEL_NAME}")
-
     while not done:
-        step += 1
+        current_task = obs.task
+        print(f"[START] task={current_task} env={BENCHMARK} model={MODEL_NAME}")
 
         prompt = f"""Task: {obs.instruction}
 
@@ -60,7 +59,7 @@ Give your verdict:"""
             error_str = str(e)[:80]
 
         action = CodeReviewAction(
-            task=obs.task,
+            task=current_task,
             verdict=verdict,
             confidence=1.0
         )
@@ -68,13 +67,13 @@ Give your verdict:"""
         obs = env.step(action)
         reward = obs.last_reward
         done = obs.done
-        rewards.append(reward)
-        print(f"[STEP] step={step} task={obs.task} action={repr(verdict[:80])} reward={reward:.2f} done={str(done).lower()} error={error_str}")
-    rewards_str = ",".join(f"{r:.2f}" for r in rewards)
-    total_raw = sum(rewards)
-    total_normalized = total_raw / len(rewards) if rewards else 0.0
-    success = total_raw > 0
-    print(f"[END] success={str(success).lower()} steps={step} score={total_normalized:.2f} rewards={rewards_str}")
+        
+        # Format exact log output per task
+        print(f"[STEP] step=1 task={current_task} action={repr(verdict[:80])} reward={reward:.2f} done=true error={error_str}")
+        success = reward > 0
+        print(f"[END] success={str(success).lower()} steps=1 score={reward:.2f} rewards={reward:.2f}")
+
+    # No global [END] block needed, tasks are parsed individually.
 
 
 if __name__ == "__main__":
