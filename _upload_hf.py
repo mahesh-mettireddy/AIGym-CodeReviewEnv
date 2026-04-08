@@ -67,7 +67,7 @@ CMD ["python", "-c", "import uvicorn; uvicorn.run('server.app:app', host='0.0.0.
     # Write README with HF frontmatter
     readme = staging / 'README.md'
     if readme.exists():
-        content = readme.read_text()
+        content = readme.read_text(encoding='utf-8')
         if not content.startswith('---'):
             frontmatter = (
                 "---\n"
