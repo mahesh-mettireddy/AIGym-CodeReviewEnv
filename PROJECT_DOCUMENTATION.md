@@ -49,13 +49,14 @@ sequenceDiagram
 
 ### The Progressive Task Curriculum
 
-The environment forces the AI model to evolve through three distinct difficulty tiers during a single episode.
+The environment forces the AI model to evolve through four distinct difficulty tiers during a single episode.
 
 | Complexity | Task Name | Goal | Expected Action |
 | :--- | :--- | :--- | :--- |
-| 🟢 **Easy** | `bug_detection` | Identify fatal syntax errors or logic bugs (e.g., `ZeroDivisionError`). | A strict "yes/no" boolean justification. |
-| 🟡 **Medium** | `code_smell` | Locate bad styling, bad variable naming, or anti-patterns in working code. | A description of the bad practice. |
-| 🔴 **Hard** | `improvement` | Look at a complex but working script and suggest an actionable refactor. | A strict architectural suggestion. |
+| 🟢 **Easy** | `bug_detection` | Identify fatal syntax errors or logic bugs (e.g., Race Conditions, Mutable Defaults). | A strict "yes/no" boolean justification. |
+| 🟡 **Medium** | `code_smell` | Locate bad styling, bad variable naming, or anti-patterns (e.g. God Objects). | A description of the bad practice. |
+| 🔴 **Hard** | `improvement` | Look at a complex script and suggest an actionable algorithmic refactor (e.g. O(N²) to O(N)). | A strict architectural suggestion. |
+| 🟣 **Expert** | `security_vulnerability` | **[NEW]** Identify critical security flaws (e.g. SQLi, Path Traversal, Weak Hashing). | A detailed vulnerability report & fix. |
 
 ---
 
@@ -80,12 +81,15 @@ This project leverages modern Python infrastructure to ensure millisecond-latenc
 ```text
 my_first_env/
 ├── openenv.yaml                   # 📜 OpenEnv Manifest (Declares tasks and models)
+├── README.md                      # 📖 Main repository documentation
+├── PROJECT_DOCUMENTATION.md       # 🧠 Deep-dive architecture & manual
 ├── models.py                      # 🏗️ Pydantic Action/Observation Schemas
 ├── client.py                      # 📡 Client SDK mapping for OpenEnv
 ├── inference.py                   # 🤖 Benchmark Evaluation Script (Testing Qwen 72B)
 ├── _upload_hf.py                  # ☁️ Automated deployment script
 ├── server/
 │   ├── app.py                     # 🌐 FastAPI wrapper exposing /reset and /step REST routes
+│   ├── graders.py                 # ⚖️ Formal Rubric Graders (Refined Logic)
 │   ├── my_first_env_environment.py# 🧠 Core Simulation Logic (Episodes, Grading, State Management)
 │   ├── requirements.txt           # 📦 Dependency list
 │   └── Dockerfile                 # 🐳 Production Image Blueprint
