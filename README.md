@@ -1,65 +1,102 @@
-# CodeReviewEnv
+---
+title: Code Review Env
+emoji: 🔍
+colorFrom: blue
+colorTo: purple
+sdk: docker
+pinned: false
+app_port: 7860
+base_path: /web
+tags:
+  - openenv
+  - code-review
+  - security
+---
 
-An OpenEnv reinforcement learning environment where AI agents learn to review Python code like a senior developer.
+# CodeReviewEnv (OpenEnv Hackathon)
 
-## Motivation
+An OpenEnv reinforcement learning environment designed to train AI agents to review Python code like a Staff-level developer. 
 
-Code review is a real-world task performed daily by developers. Training agents to identify bugs, code smells, and suggest improvements has direct practical value for AI-assisted development tools.
+[![OpenEnv Readiness](https://img.shields.io/badge/OpenEnv-Ready-success.svg)](#)
+[![Python 3.11](https://img.shields.io/badge/Python-3.11-blue.svg)](#)
 
-## Tasks
+## 📌 Motivation
 
-| Task | Difficulty | Description |
+As AI coding companions become ubiquitous, their ability to generate code is outpacing their ability to securely audit it. **CodeReviewEnv** bridges this gap by exposing LLMs to a rigorous evaluation matrix of real-world software engineering domains: ranging from minor performance bottlenecks up to critical security vulnerabilities like Path Traversal or SQL Injection.
+
+## 🏗️ Environment Architecture
+
+```mermaid
+sequenceDiagram
+    participant Agent as LLM Agent
+    participant Env as CodeReviewEnv
+    
+    Env->>Agent: Observation (instruction, python code_snippet)
+    Note over Agent: Agent analyzes code for<br>Bugs, Smells, or Vulcanerabilities
+    Agent-->>Env: Action (task, verdict, confidence)
+    
+    rect rgb(240, 248, 255)
+        Note left of Env: Rubric Graders<br>Evaluate Response
+        Env-->>Env: Granular Keyword Mapping
+        Env-->>Env: Compute Reward [0.01 - 0.99]
+    end
+    
+    Env->>Agent: Observation (done=True, last_reward)
+```
+
+## 📋 Task Matrices
+
+| Task Configuration | Difficulty | Description / Domains Evaluated |
 |------|-----------|-------------|
-| bug_detection | Easy | Identify if the code has a bug and explain it |
-| code_smell | Medium | Identify bad practices like magic numbers, bare excepts |
-| improvement | Hard | Suggest a specific, actionable improvement |
+| `bug_detection` | Easy | Identify active runtime bugs (e.g. ZeroDivision, Race Conditions). |
+| `code_smell` | Medium | Identify architectural bad practices (e.g. God Objects, Bare Excepts). |
+| `improvement` | Hard | Provide specific algorithmic/runtime improvements. |
+| `security_vulnerability` | Expert | **[NEW]** Audit for critical security flaws (e.g. Path Traversal, MD5 collisions, SQLi). |
 
-## Action Space
+## ⚙️ Core Interfaces
 
-| Field | Type | Description |
-|-------|------|-------------|
-| task | string | Current task name |
-| verdict | string | Agent's review verdict |
-| confidence | float | Agent confidence 0.0–1.0 |
-
-## Observation Space
+### Action Space
 
 | Field | Type | Description |
 |-------|------|-------------|
-| task | string | Current task name |
-| code_snippet | string | Python code to review |
-| instruction | string | What the agent must do |
-| last_verdict | string | Agent's previous verdict |
-| last_reward | float | Reward from last step |
-| done | boolean | Episode complete |
-| score | float | Total score so far |
-| feedback | string | Feedback on last action |
+| `task` | string | Current task mapped ID (e.g., `security_vulnerability`) |
+| `verdict` | string | Agent's raw textual reasoning and verdict |
+| `confidence` | float | Agent confidence index 0.0–1.0 |
 
-## Reward Function
 
-- Exact correct identification with explanation → 1.0
-- Correct verdict, weak explanation → 0.6
-- Partially correct → 0.3–0.4
-- Wrong → 0.0
+### Observation Space
 
-## Setup
+| Field | Type | Description |
+|-------|------|-------------|
+| `task` | string | Current task mapped ID |
+| `code_snippet` | string | Python code snippet requiring audit |
+| `instruction` | string | Explicit instructions for the agent's objective |
+| `last_reward` | float | Float evaluation score heavily weighted by technical exactness |
+| `done` | boolean | Signals evaluation terminal state |
+
+
+## 🧠 Granular Reward Function
+
+Unlike simplistic RL code tasks, our Rubric engines utilize a tiered reward mechanism based on technical density.
+- **0.99 [Expert]:** Pinpoints the exact bug AND utilizes industry-standard vocabulary (e.g., "SQL Injection").
+- **0.75 / 0.60 [Intermediate]:** Identifies the general issue but fails to pinpoint the exact syntax error.
+- **0.01 [Failed]:** Hallucination, absolute failure, or false positive.
+
+## 🚀 Usage
+
+### 1. Local Testing
 ```bash
-pip install openenv-core
+# Export inference capabilities mapping
+export HF_TOKEN="your_huggingface_token"
+
+# Run headless multi-task validation directly against the evaluation inference tracer
 python inference.py
 ```
 
-## Baseline Scores
+### 2. Standalone Server Mode
+```bash
+# The server maps robust REST/WebSocket frameworks natively
+uvicorn server.app:app --host 0.0.0.0 --port 7860
+```
 
-| Task | Baseline Score |
-|------|---------------|
-| bug_detection | ~0.8 |
-| code_smell | ~0.6 |
-| improvement | ~0.5 |
-
-## Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| API_BASE_URL | LLM API endpoint |
-| MODEL_NAME | Model identifier |
-| HF_TOKEN | HuggingFace API key |
+*Built specifically for the Meta PyTorch Hackathon x Scaler School of Technology.*

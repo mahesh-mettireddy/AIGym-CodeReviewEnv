@@ -18,68 +18,53 @@ from models import CodeReviewAction, CodeReviewObservation
 # -------------------------------------------------------
 TASKS = {
     "bug_detection": {
-        "instruction": "Does this code have a bug? Reply with 'yes' or 'no' and explain briefly.",
+        "instruction": "Does this code have a critical runtime bug or logical flaw? Reply with 'yes' or 'no' and explain briefly.",
         "difficulty": "easy",
         "snippets": [
             {
                 "code": """
-def divide(a, b):
-    return a / b
-
-result = divide(10, 0)
-print(result)
+def get_user_session(db, user_id):
+    cursor = db.cursor()
+    cursor.execute(f"SELECT * FROM sessions WHERE id = '{user_id}'")
+    return cursor.fetchone()
 """,
                 "has_bug": True,
-                "keywords": ["zero", "division", "zerodivision", "divide by zero", "zero error"],
-                "explanation": "ZeroDivisionError — dividing by 0 with no error handling"
+                "keywords": ["sql injection", "sqli", "injection", "parameterized", "f-string"],
+                "explanation": "Critical vulnerability: SQL Injection via f-strings in query."
             },
             {
                 "code": """
-def get_first(lst):
-    return lst[0]
-
-items = []
-print(get_first(items))
+def append_to_log(message, log=[]):
+    log.append(message)
+    return log
 """,
                 "has_bug": True,
-                "keywords": ["index", "empty", "indexerror", "list", "out of range"],
-                "explanation": "IndexError — accessing index 0 of an empty list"
+                "keywords": ["mutable default", "default argument", "list", "persists", "memory"],
+                "explanation": "Logical bug: default argument 'log=[]' is mutable and persists globally across calls."
             },
             {
                 "code": """
-def add(a, b):
-    return a + b
-
-print(add(3, 4))
+def divide_chunks(files):
+    return [files[i:i + 10] for i in range(0, len(files), 10)]
 """,
                 "has_bug": False,
-                "keywords": ["no bug", "correct", "no error", "works", "fine", "no issue"],
-                "explanation": "No bug — simple addition works fine"
+                "keywords": ["no bug", "correct", "works", "chunking", "fine"],
+                "explanation": "No bug: Standard and correct list chunking in Python."
             },
-            {
+             {
                 "code": """
-def get_value(d, key):
-    return d[key]
+import threading
+counter = 0
 
-data = {"name": "Alice"}
-print(get_value(data, "age"))
+def increment():
+    global counter
+    for _ in range(1000):
+        counter += 1
 """,
                 "has_bug": True,
-                "keywords": ["key", "keyerror", "missing", "not found", "dict"],
-                "explanation": "KeyError — 'age' key doesn't exist in the dict"
-            },
-            {
-                "code": """
-numbers = [1, 2, 3, 4, 5]
-total = 0
-for i in range(1, len(numbers) + 1):
-    total += numbers[i]
-print(total)
-""",
-                "has_bug": True,
-                "keywords": ["index", "off by one", "range", "indexerror", "out of range"],
-                "explanation": "Off-by-one error — range goes to len(numbers) but max valid index is len-1"
-            },
+                "keywords": ["race condition", "lock", "thread safe", "gil", "atomic"],
+                "explanation": "Concurrency Bug: Race condition when modifying global counter without a lock."
+            }
         ]
     },
 
@@ -89,43 +74,15 @@ print(total)
         "snippets": [
             {
                 "code": """
-def calculate(x):
-    return x * 3.14159 * 2
-""",
-                "smells": ["magic number", "hardcoded", "constant", "pi", "named constant"],
-                "explanation": "Magic number — 3.14159 should be a named constant like PI"
-            },
-            {
-                "code": """
 def process(data):
     try:
-        result = int(data)
+        result = transform_pipeline(data)
         return result
-    except:
+    except Exception:
         pass
 """,
-                "smells": ["bare except", "empty except", "silent", "swallow", "exception", "error handling"],
-                "explanation": "Bare except with pass — silently swallows all exceptions"
-            },
-            {
-                "code": """
-def get_user_data(id, name, email, age, address, phone, country):
-    return {"id": id, "name": name, "email": email,
-            "age": age, "address": address, "phone": phone,
-            "country": country}
-""",
-                "smells": ["too many", "parameters", "arguments", "long parameter", "data class", "object"],
-                "explanation": "Too many parameters — should use a data class or object"
-            },
-            {
-                "code": """
-def check_user(u):
-    if u == 1:
-        return True
-    return False
-""",
-                "smells": ["single letter", "variable name", "naming", "unclear", "descriptive"],
-                "explanation": "Poor variable naming — 'u' is not descriptive, should be 'user_id'"
+                "smells": ["bare except", "empty except", "silent", "swallow", "exception", "error handling", "pass"],
+                "explanation": "Bare except with pass — silently swallows all exceptions obscuring runtime crashes."
             },
             {
                 "code": """
@@ -136,67 +93,80 @@ for item in range(10):
                 "smells": ["list comprehension", "comprehension", "pythonic", "append", "loop"],
                 "explanation": "Should use list comprehension: [item*item for item in range(10)]"
             },
+           {
+                "code": """
+class DataProcessor:
+    def process_csv(self): pass
+    def validate_xml(self): pass
+    def generate_html_report(self): pass
+    def connect_to_db(self): pass
+    def send_email_alert(self): pass
+""",
+                "smells": ["god object", "single responsibility", "srp", "god class", "too many", "cohesion"],
+                "explanation": "God Object / Violation of Single Responsibility Principle — handles UI, DB, parsing, and networking."
+            }
         ]
     },
 
     "improvement": {
-        "instruction": "Suggest one specific improvement to this code with a brief reason.",
+        "instruction": "Suggest one specific algorithmic or runtime improvement to this code with a brief reason.",
         "difficulty": "hard",
         "snippets": [
             {
                 "code": """
-def find_user(users, name):
-    for i in range(len(users)):
-        if users[i]["name"] == name:
-            return users[i]
-    return None
+def find_duplicates(data_list):
+    duplicates = []
+    for i in range(len(data_list)):
+        for j in range(i+1, len(data_list)):
+            if data_list[i] == data_list[j]:
+                duplicates.append(data_list[i])
+    return list(set(duplicates))
 """,
-                "improvements": ["enumerate", "next", "list comprehension", "pythonic", "range(len"],
-                "explanation": "Use enumerate() or next() instead of range(len()) — more Pythonic"
+                "improvements": ["hash map", "set", "o(n)", "complexity", "counter", "collections"],
+                "explanation": "O(N^2) complexity. Use a set or collections.Counter to reduce to O(N)."
             },
             {
                 "code": """
-import os
-db_password = "admin123"
-api_key = "sk-abc123xyz"
-""",
-                "improvements": ["environment variable", "env var", "os.getenv", "secret", "hardcoded", "config"],
-                "explanation": "Hardcoded secrets — use environment variables or a config file"
-            },
-            {
-                "code": """
-def celsius_to_fahrenheit(c):
-    f = c * 9 / 5 + 32
-    return f
-""",
-                "improvements": ["docstring", "type hint", "annotation", "return type", "documentation"],
-                "explanation": "Missing type hints and docstring — add them for clarity"
-            },
-            {
-                "code": """
-def read_file(path):
+def read_config(path):
     f = open(path)
     data = f.read()
     f.close()
     return data
 """,
-                "improvements": ["with", "context manager", "with open", "close", "resource"],
-                "explanation": "Use 'with open()' context manager to ensure file is always closed"
-            },
-            {
-                "code": """
-import time
-def retry(func):
-    for i in range(3):
-        try:
-            return func()
-        except:
-            time.sleep(1)
-""",
-                "improvements": ["bare except", "exception type", "specific exception", "logging", "backoff"],
-                "explanation": "Bare except hides errors — catch specific exceptions and add logging"
-            },
+                "improvements": ["with", "context manager", "with open", "close", "resource", "leak"],
+                "explanation": "Use 'with open()' context manager to ensure the file descriptor doesn't leak if an exception is raised."
+            }
         ]
+    },
+    
+    "security_vulnerability": {
+         "instruction": "Identify the critical security vulnerability and recommend the exact fix.",
+         "difficulty": "expert",
+         "snippets": [
+             {
+                "code": """
+import os
+from flask import request, send_file
+
+def download_file():
+    filename = request.args.get('file')
+    filepath = os.path.join('/var/www/uploads/', filename)
+    return send_file(filepath)
+""",
+                "flaws": ["path traversal", "directory traversal", "lfi", "sanitize", "dot dot slash"],
+                "explanation": "Path Traversal vulnerability. User can pass '../../etc/passwd' to expose internal files."
+             },
+             {
+                 "code": """
+import hashlib
+
+def hash_password(password_string):
+    return hashlib.md5(password_string.encode()).hexdigest()
+""",
+                 "flaws": ["md5", "collision", "weak hash", "bcrypt", "argon2", "salt"],
+                 "explanation": "Weak/Broken hashing algorithm (MD5) without a salt. Should use bcrypt or Argon2."
+             }
+         ]
     }
 }
 
@@ -205,11 +175,11 @@ import random
 class CodeReviewEnvironment(Environment):
     """
     CodeReviewEnv — teaches AI agents to review Python code.
-    3 tasks: bug detection (easy), code smell (medium), improvement suggestion (hard).
+    4 tasks: bug detection, code smell, improvement suggestion, security auditing.
     """
 
     SUPPORTS_CONCURRENT_SESSIONS: bool = True
-    TASKS = ["bug_detection", "code_smell", "improvement"]
+    TASKS = ["bug_detection", "code_smell", "improvement", "security_vulnerability"]
 
     def __init__(self):
         self._state = State(episode_id=str(uuid4()), step_count=0)

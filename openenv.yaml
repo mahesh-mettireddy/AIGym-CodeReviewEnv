@@ -37,6 +37,13 @@ tasks:
     reward_range: [0.01, 0.99]
     grader: server.graders.ImprovementGrader
 
+  - id: security_vulnerability
+    name: security_vulnerability
+    difficulty: expert
+    description: Identify critical security flaws such as SQLi, XSS, or hardcoded secrets
+    reward_range: [0.01, 0.99]
+    grader: server.graders.SecurityGrader
+
 action_space:
   type: CodeReviewAction
   fields:

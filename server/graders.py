@@ -9,11 +9,9 @@ def normalize(text: str) -> str:
 
 class BugDetectionGrader(Rubric):
     def forward(self, action: dict, observation: dict) -> float:
-        # Pydantic models might be passed as dicts or objects depending on evaluator hook
         verdict = normalize(getattr(action, 'verdict', action.get('verdict', '')) if action else '')
         code_snippet = getattr(observation, 'code_snippet', observation.get('code_snippet', '')) if observation else ''
         
-        # Find snippet
         snippet_data = next((s for s in TASKS["bug_detection"]["snippets"] if s["code"].strip() == code_snippet.strip()), None)
         if not snippet_data:
             return 0.01
@@ -23,10 +21,12 @@ class BugDetectionGrader(Rubric):
         said_no = "no" in verdict
 
         if has_bug and said_yes:
-            for kw in snippet_data["keywords"]:
-                if kw in verdict:
-                    return 0.99
-            return 0.6
+            matches = sum(1 for kw in snippet_data["keywords"] if kw in verdict)
+            if matches >= 2:
+                return 0.99
+            if matches == 1:
+                return 0.75
+            return 0.50
         elif not has_bug and said_no:
             return 0.99
         elif has_bug and said_no:
@@ -44,12 +44,14 @@ class CodeSmellGrader(Rubric):
         if not snippet_data:
             return 0.01
 
-        for smell in snippet_data["smells"]:
-            if smell in verdict:
-                return 0.99
+        matches = sum(1 for smell in snippet_data["smells"] if smell in verdict)
+        if matches >= 2:
+            return 0.99
+        if matches == 1:
+            return 0.60
         
         if len(verdict) > 20:
-            return 0.3
+            return 0.20
         return 0.01
 
 class ImprovementGrader(Rubric):
@@ -61,10 +63,31 @@ class ImprovementGrader(Rubric):
         if not snippet_data:
             return 0.01
 
-        for imp in snippet_data["improvements"]:
-            if imp in verdict:
-                return 0.99
+        matches = sum(1 for imp in snippet_data["improvements"] if imp in verdict)
+        if matches >= 2:
+            return 0.99
+        if matches == 1:
+            return 0.75
         
         if len(verdict) > 30:
-            return 0.4
+            return 0.25
+        return 0.01
+
+class SecurityGrader(Rubric):
+    def forward(self, action: dict, observation: dict) -> float:
+        verdict = normalize(getattr(action, 'verdict', action.get('verdict', '')) if action else '')
+        code_snippet = getattr(observation, 'code_snippet', observation.get('code_snippet', '')) if observation else ''
+        
+        snippet_data = next((s for s in TASKS["security_vulnerability"]["snippets"] if s["code"].strip() == code_snippet.strip()), None)
+        if not snippet_data:
+            return 0.01
+
+        matches = sum(1 for flaw in snippet_data["flaws"] if flaw in verdict)
+        if matches >= 2:
+            return 0.99  # Absolute expert identification
+        if matches == 1:
+            return 0.80  # Solid identification
+        
+        if len(verdict) > 50:
+            return 0.30  # Tried to answer but missed core terminology
         return 0.01
