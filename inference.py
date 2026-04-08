@@ -69,9 +69,7 @@ Give your verdict:"""
         reward = obs.last_reward
         done = obs.done
         rewards.append(reward)
-
-        print(f"[STEP] step={step} action={repr(verdict[:80])} reward={reward:.2f} done={str(done).lower()} error={error_str}")
-
+        print(f"[STEP] step={step} task={obs.task} action={repr(verdict[:80])} reward={reward:.2f} done={str(done).lower()} error={error_str}")
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
     total_raw = sum(rewards)
     total_normalized = total_raw / len(rewards) if rewards else 0.0
