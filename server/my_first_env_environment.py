@@ -245,10 +245,6 @@ class CodeReviewEnvironment(Environment):
         return re.sub(r'[^\w\s]', ' ', text.lower()).strip()
 
     def _grade(self, action: CodeReviewAction) -> float:
-        """
-        The grader — scores agent's verdict against known answers.
-        This is the core of the environment.
-        """
         verdict = self._normalize(action.verdict)
         task = self._current_task
         snippet = self._current_snippet
@@ -259,38 +255,37 @@ class CodeReviewEnvironment(Environment):
             said_no = "no" in verdict
 
             if has_bug and said_yes:
-                # Check if they explained it correctly
-                for kw in snippet["keywords"]:
-                    if kw in verdict:
-                        return 0.99      # correct + good explanation
-                return 0.6              # correct verdict, weak explanation
-
+                matches = sum(1 for kw in snippet["keywords"] if kw in verdict)
+                if matches >= 2: return 0.99
+                if matches == 1: return 0.75
+                return 0.50
             elif not has_bug and said_no:
-                return 0.99             # correctly identified no bug
-
+                return 0.99
             elif has_bug and said_no:
-                return 0.01             # missed the bug
-
+                return 0.01
             elif not has_bug and said_yes:
-                return 0.01             # false positive
-
-            return 0.1                  # didn't say yes or no clearly
+                return 0.01
+            return 0.1
 
         elif task == "code_smell":
-            for smell in snippet["smells"]:
-                if smell in verdict:
-                    return 0.99         # identified the smell correctly
-            # Partial credit if answer is long and relevant
-            if len(verdict) > 20:
-                return 0.3
+            matches = sum(1 for smell in snippet["smells"] if smell in verdict)
+            if matches >= 2: return 0.99
+            if matches == 1: return 0.60
+            if len(verdict) > 20: return 0.20
             return 0.01
 
         elif task == "improvement":
-            for imp in snippet["improvements"]:
-                if imp in verdict:
-                    return 0.99         # suggested the right improvement
-            if len(verdict) > 30:
-                return 0.4              # suggested something, just not ideal
+            matches = sum(1 for imp in snippet["improvements"] if imp in verdict)
+            if matches >= 2: return 0.99
+            if matches == 1: return 0.75
+            if len(verdict) > 30: return 0.25
+            return 0.01
+
+        elif task == "security_vulnerability":
+            matches = sum(1 for flaw in snippet["flaws"] if flaw in verdict)
+            if matches >= 2: return 0.99
+            if matches == 1: return 0.80
+            if len(verdict) > 50: return 0.30
             return 0.01
 
         return 0.01
