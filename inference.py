@@ -28,13 +28,14 @@ def main():
 
     obs = env.reset()
     done = False
-    step = 0
-    rewards = []
+    task_rewards = []
+    task_steps = 0
+    current_task = obs.task
+    
+    print(f"[START] task={current_task} env={BENCHMARK} model={MODEL_NAME}")
 
     while not done:
-        current_task = obs.task
-        print(f"[START] task={current_task} env={BENCHMARK} model={MODEL_NAME}")
-
+        task_steps += 1
         prompt = f"""Task: {obs.instruction}
 
 Code:
@@ -66,12 +67,24 @@ Give your verdict:"""
 
         obs = env.step(action)
         reward = obs.last_reward
+        task_rewards.append(reward)
         done = obs.done
         
-        # Format exact log output per task
-        print(f"[STEP] step=1 task={current_task} action={repr(verdict[:80])} reward={reward:.2f} done=true error={error_str}")
-        success = reward > 0
-        print(f"[END] success={str(success).lower()} steps=1 score={reward:.2f} rewards={reward:.2f}")
+        # Log the step
+        print(f"[STEP] step={task_steps} task={current_task} action={repr(verdict[:80])} reward={reward:.2f} done={str(obs.done or obs.task != current_task).lower()} error={error_str}")
+
+        # Transition logic
+        if obs.done or obs.task != current_task:
+            success = any(r >= 0.90 for r in task_rewards)
+            avg_score = sum(task_rewards) / len(task_rewards)
+            rewards_list_str = "[" + ", ".join(f"{r:.2f}" for r in task_rewards) + "]"
+            print(f"[END] success={str(success).lower()} steps={task_steps} score={avg_score:.2f} rewards={rewards_list_str}")
+            
+            if not obs.done:
+                current_task = obs.task
+                task_rewards = []
+                task_steps = 0
+                print(f"[START] task={current_task} env={BENCHMARK} model={MODEL_NAME}")
 
     # No global [END] block needed, tasks are parsed individually.
 

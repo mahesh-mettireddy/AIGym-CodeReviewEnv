@@ -9,9 +9,9 @@ requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "openenv-my_first_env"
-version = "0.1.0"
-description = "My First Env environment for OpenEnv"
+name = "openenv-code-review-env"
+version = "1.2.0"
+description = "CodeReviewEnv: An advanced RL environment for evaluating Agentic Code Auditing capabilities."
 requires-python = ">=3.10"
 dependencies = [
     # Core OpenEnv runtime (provides FastAPI server + HTTP client types)

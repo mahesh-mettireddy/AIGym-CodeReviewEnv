@@ -24,7 +24,13 @@ An OpenEnv reinforcement learning environment designed to train AI agents to rev
 
 As AI coding companions become ubiquitous, their ability to generate code is outpacing their ability to securely audit it. **CodeReviewEnv** bridges this gap by exposing LLMs to a rigorous evaluation matrix of real-world software engineering domains: ranging from minor performance bottlenecks up to critical security vulnerabilities like Path Traversal or SQL Injection.
 
-## 🏗️ Environment Architecture
+### 🔥 Expert Mode: Agentic Refinement Loop
+This environment is no longer single-shot. It implements a **Stateful Refinement Loop**:
+1. **Initial Critique**: The AI provides its first verdict.
+2. **Environment Hint**: If the verdict is imprecise, the environment provides a "Hint" and stays on the same task.
+3. **Refinement**: The agent MUST use the feedback to provided a high-precision answer, including the **Line Number** and correct **Vulnerability Class**.
+
+## 🏗️ Architecture & Code Flow
 
 ```mermaid
 sequenceDiagram
@@ -46,12 +52,12 @@ sequenceDiagram
 
 ## 📋 Task Matrices
 
-| Task Configuration | Difficulty | Description / Domains Evaluated |
-|------|-----------|-------------|
-| `bug_detection` | Easy | Identify active runtime bugs (e.g. ZeroDivision, Race Conditions). |
-| `code_smell` | Medium | Identify architectural bad practices (e.g. God Objects, Bare Excepts). |
-| `improvement` | Hard | Provide specific algorithmic/runtime improvements. |
-| `security_vulnerability` | Expert | **[NEW]** Audit for critical security flaws (e.g. Path Traversal, MD5 collisions, SQLi). |
+| Task Configuration | Complexity | Task Name | Goal | Expected Action |
+| :--- | :--- | :--- | :--- | :--- |
+| 🟢 **Easy** | `bug_detection` | Identify fatal bugs (e.g. Race Conditions). | **Line Number** + "yes/no" |
+| 🟡 **Medium** | `code_smell` | Locate bad styling (e.g. God Objects). | **Line Number** + Smell Class |
+| 🔴 **Hard** | `improvement` | Suggest O(N²)→O(N) algorithmic refactors. | **Line Number** + Reasoning |
+| 🟣 **Expert** | `security_vulnerability` | Identify critical flaws (SQLi, Path Traversal). | **Line Number** + Fix |
 
 ## ⚙️ Core Interfaces
 

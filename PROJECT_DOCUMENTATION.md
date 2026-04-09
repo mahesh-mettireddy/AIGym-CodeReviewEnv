@@ -49,14 +49,14 @@ sequenceDiagram
 
 ### The Progressive Task Curriculum
 
-The environment forces the AI model to evolve through four distinct difficulty tiers during a single episode.
+The environment forces the AI model to evolve through four distinct difficulty tiers. To get a maximum reward (0.99), the agent **must** specify the correct Line Number.
 
 | Complexity | Task Name | Goal | Expected Action |
 | :--- | :--- | :--- | :--- |
-| 🟢 **Easy** | `bug_detection` | Identify fatal syntax errors or logic bugs (e.g., Race Conditions, Mutable Defaults). | A strict "yes/no" boolean justification. |
-| 🟡 **Medium** | `code_smell` | Locate bad styling, bad variable naming, or anti-patterns (e.g. God Objects). | A description of the bad practice. |
-| 🔴 **Hard** | `improvement` | Look at a complex script and suggest an actionable algorithmic refactor (e.g. O(N²) to O(N)). | A strict architectural suggestion. |
-| 🟣 **Expert** | `security_vulnerability` | **[NEW]** Identify critical security flaws (e.g. SQLi, Path Traversal, Weak Hashing). | A detailed vulnerability report & fix. |
+| 🟢 **Easy** | `bug_detection` | Identify fatal bugs (e.g. Race Conditions). | **Line Number** + "yes/no" |
+| 🟡 **Medium** | `code_smell` | Locate bad styling (e.g. God Objects). | **Line Number** + Smell Class |
+| 🔴 **Hard** | `improvement` | Suggest O(N²)→O(N) algorithmic refactors. | **Line Number** + Reasoning |
+| 🟣 **Expert** | `security_vulnerability` | Identify critical flaws (SQLi, Path Traversal). | **Line Number** + Fix |
 
 ---
 
