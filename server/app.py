@@ -57,6 +57,18 @@ app = create_app(
     max_concurrent_envs=10,
 )
 
+# Explicitly add health and schema endpoints for evaluator probes
+@app.get("/health")
+async def health():
+    return {"status": "healthy", "env": "code_review_env"}
+
+@app.get("/schema")
+async def schema():
+    return {
+        "action_space": CodeReviewAction.schema(),
+        "observation_space": CodeReviewObservation.schema()
+    }
+
 
 def main(host: str = "0.0.0.0", port: int = 8000):
     """

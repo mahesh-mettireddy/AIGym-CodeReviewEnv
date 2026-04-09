@@ -3,7 +3,7 @@ from pydantic import Field
 
 class CodeReviewAction(Action):
     """What the agent sends — its review decision."""
-    task: str = Field(..., description="Task name: bug_detection, code_smell, improvement")
+    task: str = Field("bug_detection", description="Task name: bug_detection, code_smell, improvement")
     verdict: str = Field(..., description="Agent's verdict or suggestion as plain text")
     confidence: float = Field(default=1.0, description="Agent confidence 0.0 to 1.0")
 

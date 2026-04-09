@@ -1,8 +1,8 @@
 from openenv.core.rubrics.base import Rubric
 import re
 
-# We import the TASKS from our environment file to look up snippet answers
-from server.my_first_env_environment import TASKS
+# We import the TASKS from our standalone tasks file
+from .tasks import TASKS
 
 def normalize(text: str) -> str:
     return re.sub(r'[^\w\s]', ' ', str(text).lower()).strip()
@@ -14,14 +14,17 @@ def get_line_match(text: str, target_line: int) -> bool:
 
 class BugDetectionGrader(Rubric):
     def forward(self, action: dict, observation: dict) -> float:
-        verdict = normalize(getattr(action, 'verdict', action.get('verdict', '')) if action else '')
-        code_snippet = getattr(observation, 'code_snippet', observation.get('code_snippet', '')) if observation else ''
+        # Support both Pydantic objects and raw dicts
+        v_raw = action.verdict if hasattr(action, 'verdict') else action.get('verdict', '')
+        verdict = normalize(v_raw)
         
-        snippet_data = next((s for s in TASKS["bug_detection"]["snippets"] if s["code"].strip() == code_snippet.strip()), None)
+        o_code = observation.code_snippet if hasattr(observation, 'code_snippet') else observation.get('code_snippet', '')
+        
+        snippet_data = next((s for s in TASKS["bug_detection"]["snippets"] if s["code"].strip() == o_code.strip()), None)
         if not snippet_data: return 0.01
 
         has_bug = snippet_data["has_bug"]
-        has_correct_line = get_line_match(str(getattr(action, 'verdict', '')), snippet_data["target_line"])
+        has_correct_line = get_line_match(str(v_raw), snippet_data["target_line"])
         said_yes = "yes" in verdict
         said_no = "no" in verdict
 
@@ -41,13 +44,14 @@ class BugDetectionGrader(Rubric):
 
 class CodeSmellGrader(Rubric):
     def forward(self, action: dict, observation: dict) -> float:
-        verdict = normalize(getattr(action, 'verdict', action.get('verdict', '')) if action else '')
-        code_snippet = getattr(observation, 'code_snippet', observation.get('code_snippet', '')) if observation else ''
+        v_raw = action.verdict if hasattr(action, 'verdict') else action.get('verdict', '')
+        verdict = normalize(v_raw)
+        o_code = observation.code_snippet if hasattr(observation, 'code_snippet') else observation.get('code_snippet', '')
         
-        snippet_data = next((s for s in TASKS["code_smell"]["snippets"] if s["code"].strip() == code_snippet.strip()), None)
+        snippet_data = next((s for s in TASKS["code_smell"]["snippets"] if s["code"].strip() == o_code.strip()), None)
         if not snippet_data: return 0.01
 
-        has_correct_line = get_line_match(str(getattr(action, 'verdict', '')), snippet_data["target_line"])
+        has_correct_line = get_line_match(str(v_raw), snippet_data["target_line"])
         matches = sum(1 for smell in snippet_data["smells"] if smell in verdict)
         
         if has_correct_line:
@@ -58,13 +62,14 @@ class CodeSmellGrader(Rubric):
 
 class ImprovementGrader(Rubric):
     def forward(self, action: dict, observation: dict) -> float:
-        verdict = normalize(getattr(action, 'verdict', action.get('verdict', '')) if action else '')
-        code_snippet = getattr(observation, 'code_snippet', observation.get('code_snippet', '')) if observation else ''
+        v_raw = action.verdict if hasattr(action, 'verdict') else action.get('verdict', '')
+        verdict = normalize(v_raw)
+        o_code = observation.code_snippet if hasattr(observation, 'code_snippet') else observation.get('code_snippet', '')
         
-        snippet_data = next((s for s in TASKS["improvement"]["snippets"] if s["code"].strip() == code_snippet.strip()), None)
+        snippet_data = next((s for s in TASKS["improvement"]["snippets"] if s["code"].strip() == o_code.strip()), None)
         if not snippet_data: return 0.01
 
-        has_correct_line = get_line_match(str(getattr(action, 'verdict', '')), snippet_data["target_line"])
+        has_correct_line = get_line_match(str(v_raw), snippet_data["target_line"])
         matches = sum(1 for imp in snippet_data["improvements"] if imp in verdict)
         
         if has_correct_line:
@@ -75,13 +80,14 @@ class ImprovementGrader(Rubric):
 
 class SecurityGrader(Rubric):
     def forward(self, action: dict, observation: dict) -> float:
-        verdict = normalize(getattr(action, 'verdict', action.get('verdict', '')) if action else '')
-        code_snippet = getattr(observation, 'code_snippet', observation.get('code_snippet', '')) if observation else ''
+        v_raw = action.verdict if hasattr(action, 'verdict') else action.get('verdict', '')
+        verdict = normalize(v_raw)
+        o_code = observation.code_snippet if hasattr(observation, 'code_snippet') else observation.get('code_snippet', '')
         
-        snippet_data = next((s for s in TASKS["security_vulnerability"]["snippets"] if s["code"].strip() == code_snippet.strip()), None)
+        snippet_data = next((s for s in TASKS["security_vulnerability"]["snippets"] if s["code"].strip() == o_code.strip()), None)
         if not snippet_data: return 0.01
 
-        has_correct_line = get_line_match(str(getattr(action, 'verdict', '')), snippet_data["target_line"])
+        has_correct_line = get_line_match(str(v_raw), snippet_data["target_line"])
         matches = sum(1 for flaw in snippet_data["flaws"] if flaw in verdict)
         
         if has_correct_line:
