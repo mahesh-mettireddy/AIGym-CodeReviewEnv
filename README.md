@@ -83,10 +83,17 @@ sequenceDiagram
 
 ## 🧠 Granular Reward Function
 
-Unlike simplistic RL code tasks, our Rubric engines utilize a tiered reward mechanism based on technical density.
-- **0.99 [Expert]:** Pinpoints the exact bug AND utilizes industry-standard vocabulary (e.g., "SQL Injection").
-- **0.75 / 0.60 [Intermediate]:** Identifies the general issue but fails to pinpoint the exact syntax error.
-- **0.01 [Failed]:** Hallucination, absolute failure, or false positive.
+Rewards are deterministic and tied to high-precision auditing:
+- **0.99 [Expert]:** Identifies the issue **AND** specifies the correct **Line Number**.
+- **0.75 [Advanced]:** Identifies the issue and keywords but misses the exact line.
+- **0.40 [Partial]:** Identifies the domain but fails the technical explanation.
+- **0.01 [Failed]:** Hallucination or absolute failure.
+
+## 📡 Evaluator Endpoints
+The environment exposes standard OpenEnv probing endpoints for automated evaluation:
+- `GET /health`: System heartbeat and environment ID.
+- `GET /schema`: JSON-Schema reflection of the Action/Observation space.
+- `GET /state`: Current episode metadata and step counts.
 
 ## 🚀 Usage
 
@@ -103,6 +110,15 @@ python inference.py
 ```bash
 # The server maps robust REST/WebSocket frameworks natively
 uvicorn server.app:app --host 0.0.0.0 --port 7860
+```
+
+### 3. Execution Trace Example
+```text
+[START] task=bug_detection env=code_review_env model=Qwen2.5-72B
+[STEP 1] Agent: "Yes, there is an issue here."
+[STEP 1] Env: "REFINEMENT: Correct issue, but please double check the line number."
+[STEP 2] Agent: "Yes, SQL Injection vulnerability on line 4."
+[END] success=true steps=2 score=0.99 rewards=[0.40, 0.99]
 ```
 
 *Built specifically for the Meta PyTorch Hackathon x Scaler School of Technology.*

@@ -60,6 +60,21 @@ The environment forces the AI model to evolve through four distinct difficulty t
 
 ---
 
+## 🛠️ Technical Specifications
+
+### Modular Architecture
+The environment logic is decoupled for maximum stability:
+- **`server/tasks.py`**: Central source of truth for all 12 evaluation snippets.
+- **`server/graders.py`**: Atomic Rubric classes for deterministic scoring.
+- **`server/my_first_env_environment.py`**: State machine for multi-turn episodes.
+
+### Evaluator API Endpoints
+- `/health`: GET — Returns system status and environment identity.
+- `/schema`: GET — Returns Pydantic-powered action/observation JSON schemas.
+- `/state`: GET — Returns the current episode state and step metrics.
+- `/reset`: POST — Cycles the environment to the next task sequence.
+- `/step`: POST — Submits an agent action to the rubric engine.
+
 ## 🛠️ The Technology Stack
 
 This project leverages modern Python infrastructure to ensure millisecond-latency API responses.
