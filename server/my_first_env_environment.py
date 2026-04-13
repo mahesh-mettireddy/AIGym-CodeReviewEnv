@@ -119,14 +119,6 @@ class CodeReviewEnvironment(Environment):
             next_obs.feedback = feedback
             return next_obs
 
-    def step(self, action: CodeReviewAction, **kwargs) -> CodeReviewObservation:
-        """Synchronous fallback (not recommended for Semantic Judging)."""
-        import asyncio
-        return asyncio.run(self.step_async(action))
-
-    def _normalize(self, text: str) -> str:
-        import re
-        return re.sub(r'[^\w\s]', ' ', text.lower()).strip()
 
     async def _grade_async(self, action: CodeReviewAction) -> float:
         """Delegate to Async Semantic Graders."""
