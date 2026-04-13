@@ -36,6 +36,7 @@ class CodeReviewEnvironment(Environment):
     TASKS = ["bug_detection", "code_smell", "improvement", "security_vulnerability"]
 
     def __init__(self):
+        super().__init__()
         self._state = State(episode_id=str(uuid4()), step_count=0)
         self._current_task = None
         self._current_snippet = None

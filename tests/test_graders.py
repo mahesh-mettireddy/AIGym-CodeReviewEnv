@@ -14,6 +14,15 @@ from server.graders import (
 )
 from models import CodeReviewAction, CodeReviewObservation
 
+# Reward tier constants matching the graders' scoring rubric
+REWARD_EXPERT = 0.99
+REWARD_ADVANCED_BUG = 0.75
+REWARD_ADVANCED_SMELL = 0.75
+REWARD_ADVANCED_IMPROVEMENT = 0.80
+REWARD_ADVANCED_SECURITY = 0.85
+REWARD_PARTIAL = 0.40
+REWARD_FAILED = 0.01
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -42,21 +51,21 @@ class TestBugDetectionGrader:
     def test_expert_reward_correct_line_and_keywords(self):
         verdict = "yes, SQL injection vulnerability on line 4 via f-string"
         reward = self.grader.forward(_action(verdict), _obs(self.snippet["code"]))
-        assert reward == 0.99
+        assert reward == REWARD_EXPERT
 
     def test_advanced_reward_correct_but_wrong_line(self):
         verdict = "yes, SQL injection vulnerability on line 99"
         reward = self.grader.forward(_action(verdict), _obs(self.snippet["code"]))
-        assert reward == 0.40
+        assert reward == REWARD_PARTIAL
 
     def test_failed_reward_incorrect_answer(self):
         verdict = "no, the code is perfectly fine"
         reward = self.grader.forward(_action(verdict), _obs(self.snippet["code"]))
-        assert reward == 0.01
+        assert reward == REWARD_FAILED
 
     def test_unknown_snippet_returns_minimum(self):
         reward = self.grader.forward(_action("yes"), _obs("def foo(): pass"))
-        assert reward == 0.01
+        assert reward == REWARD_FAILED
 
 
 # ---------------------------------------------------------------------------
@@ -71,11 +80,11 @@ class TestCodeSmellGrader:
         smells = self.snippet["smells"]
         verdict = f"line {self.snippet['target_line']}: {smells[0]} and {smells[1]}"
         reward = self.grader.forward(_action(verdict), _obs(self.snippet["code"]))
-        assert reward == 0.99
+        assert reward == REWARD_EXPERT
 
     def test_minimum_reward_no_keywords(self):
         reward = self.grader.forward(_action("nothing wrong"), _obs(self.snippet["code"]))
-        assert reward == 0.01
+        assert reward == REWARD_FAILED
 
 
 # ---------------------------------------------------------------------------
@@ -90,11 +99,11 @@ class TestImprovementGrader:
         imps = self.snippet["improvements"]
         verdict = f"line {self.snippet['target_line']}: {imps[0]} and {imps[1]}"
         reward = self.grader.forward(_action(verdict), _obs(self.snippet["code"]))
-        assert reward == 0.99
+        assert reward == REWARD_EXPERT
 
     def test_minimum_reward_no_keywords(self):
         reward = self.grader.forward(_action("looks fine"), _obs(self.snippet["code"]))
-        assert reward == 0.01
+        assert reward == REWARD_FAILED
 
 
 # ---------------------------------------------------------------------------
@@ -109,11 +118,11 @@ class TestSecurityGrader:
         flaws = self.snippet["flaws"]
         verdict = f"line {self.snippet['target_line']}: {flaws[0]} and {flaws[1]}"
         reward = self.grader.forward(_action(verdict), _obs(self.snippet["code"]))
-        assert reward == 0.99
+        assert reward == REWARD_EXPERT
 
     def test_minimum_reward_no_keywords(self):
         reward = self.grader.forward(_action("no issues"), _obs(self.snippet["code"]))
-        assert reward == 0.01
+        assert reward == REWARD_FAILED
 
 
 # ---------------------------------------------------------------------------
