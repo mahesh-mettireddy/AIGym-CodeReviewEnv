@@ -54,10 +54,10 @@ sequenceDiagram
 
 | Task Configuration | Complexity | Task Name | Goal | Expected Action |
 | :--- | :--- | :--- | :--- | :--- |
-| 🟢 **Easy** | `bug_detection` | Identify fatal bugs (e.g. Race Conditions). | **Line Number** + "yes/no" |
-| 🟡 **Medium** | `code_smell` | Locate bad styling (e.g. God Objects). | **Line Number** + Smell Class |
-| 🔴 **Hard** | `improvement` | Suggest O(N²)→O(N) algorithmic refactors. | **Line Number** + Reasoning |
-| 🟣 **Expert** | `security_vulnerability` | Identify critical flaws (SQLi, Path Traversal). | **Line Number** + Fix |
+| 🟢 **Easy** | `bug_detection` | `bug_detection` | Identify fatal bugs (e.g. Race Conditions). | **Line Number** + "yes/no" |
+| 🟡 **Medium** | `code_smell` | `code_smell` | Locate bad styling (e.g. God Objects). | **Line Number** + Smell Class |
+| 🔴 **Hard** | `improvement` | `improvement` | Suggest O(N²)→O(N) algorithmic refactors. | **Line Number** + Reasoning |
+| 🟣 **Expert** | `security_vulnerability` | `security_vulnerability` | Identify critical flaws (SQLi, Path Traversal). | **Line Number** + Fix |
 
 ## ⚙️ Core Interfaces
 

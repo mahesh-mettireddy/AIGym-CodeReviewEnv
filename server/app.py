@@ -65,8 +65,8 @@ async def health():
 @app.get("/schema")
 async def schema():
     return {
-        "action_space": CodeReviewAction.schema(),
-        "observation_space": CodeReviewObservation.schema()
+        "action_space": CodeReviewAction.model_json_schema(),
+        "observation_space": CodeReviewObservation.model_json_schema()
     }
 
 

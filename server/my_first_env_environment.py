@@ -41,7 +41,7 @@ class CodeReviewEnvironment(Environment):
         self._current_snippet = None
         self._task_index = 0
         self._substep_index = 0
-        # Auto-load first task so env is valid even without explicit reset
+        self._total_score = 0.0
 
     def reset(self) -> CodeReviewObservation:
         self._state = State(episode_id=str(uuid4()), step_count=0)
@@ -114,10 +114,6 @@ class CodeReviewEnvironment(Environment):
             next_obs.score = self._total_score
             next_obs.feedback = feedback
             return next_obs
-
-    def _normalize(self, text: str) -> str:
-        import re
-        return re.sub(r'[^\w\s]', ' ', text.lower()).strip()
 
     def _grade(self, action: CodeReviewAction) -> float:
         """Delegate grading to the Source of Truth: The Grader Rubrics."""

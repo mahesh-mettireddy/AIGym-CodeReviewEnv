@@ -43,3 +43,8 @@ server = "my_first_env.server.app:main"
 include-package-data = true
 packages = ["my_first_env", "my_first_env.server"]
 package-dir = { "my_first_env" = ".", "my_first_env.server" = "server" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "--import-mode=importlib"

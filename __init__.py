@@ -6,11 +6,16 @@
 
 """CodeReviewEnv Environment."""
 
-from .client import CodeReviewEnv
-from .models import CodeReviewAction, CodeReviewObservation
+try:
+    from .client import CodeReviewEnv
+    from .models import CodeReviewAction, CodeReviewObservation
 
-__all__ = [
-    "CodeReviewAction",
-    "CodeReviewObservation",
-    "CodeReviewEnv",
-]
+    __all__ = [
+        "CodeReviewAction",
+        "CodeReviewObservation",
+        "CodeReviewEnv",
+    ]
+except ImportError:
+    # Relative imports are unavailable when this file is imported outside the
+    # installed package (e.g. during pytest discovery of the project root).
+    pass
