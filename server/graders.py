@@ -1,16 +1,8 @@
 from openenv.core.rubrics.base import Rubric
-import re
 import asyncio
 from .tasks import TASKS
 from .judge_client import SemanticJudge
-
-def normalize(text: str) -> str:
-    return re.sub(r'[^\w\s]', ' ', str(text).lower()).strip()
-
-def get_line_match(text: str, target_line: int) -> bool:
-    if target_line is None: return True
-    found_lines = re.findall(r'line\s*(?::|#)?\s*(\d+)', text.lower())
-    return any(int(l) == target_line for l in found_lines)
+from .utils import normalize, get_line_match
 
 class BaseCodeReviewGrader(Rubric):
     def __init__(self):
@@ -30,9 +22,9 @@ class BaseCodeReviewGrader(Rubric):
             conf = 0.5
 
         if is_correct:
-            if conf >= 0.9: return 1.0  # Decisive Correctness
+            if conf >= 0.9: return 1.1  # Decisive Correctness Bonus
             if conf <= 0.4: return 0.7  # "Lucky guess" penalty
-            return 0.85
+            return 1.0  # standard
         else:
             if conf >= 0.8: return -0.2 # "Overconfident Hallucination" penalty
             return 0.0

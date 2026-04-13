@@ -1,0 +1,2 @@
+[console_scripts]
+server = my_first_env.server.app:main

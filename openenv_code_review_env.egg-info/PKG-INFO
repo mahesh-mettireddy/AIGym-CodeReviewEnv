@@ -1,0 +1,14 @@
+Metadata-Version: 2.4
+Name: openenv-code-review-env
+Version: 2.0.0
+Summary: CodeReviewEnv: An advanced RL environment for evaluating Agentic Code Auditing capabilities.
+Requires-Python: >=3.10
+Requires-Dist: openenv-core[core]>=0.2.2
+Requires-Dist: openai>=1.0.0
+Requires-Dist: instructor>=1.0.0
+Requires-Dist: numpy>=1.24.0
+Requires-Dist: pytest>=9.0.2
+Requires-Dist: pytest-asyncio>=1.3.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"

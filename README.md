@@ -13,7 +13,7 @@ Generating code is easy; auditing it for subtle architectural flaws and security
 ### 🔥 Major V2.0 Enhancements:
 *   **Semantic Judging**: Powered by `openenv.core.rubrics.LLMJudge`, the environment understands the *meaning* of the agent's verdict.
 *   **Confidence-Weighted Reward**: Agents are rewarded for decisive correctness and penalized for "Overconfident Hallucinations" (high confidence on a wrong answer).
-*   **Scaled Task Bank**: 40+ high-quality snippets covering async race conditions, insecure deserialization (Pickle), and O(N²) bottlenecks.
+*   **Industrial Scale Task Bank**: **100+ high-quality snippets** covering async race conditions, insecure deserialization (Pickle), and complex O(N²) bottlenecks. This prevents agent memorization and ensures benchmarking validity.
 *   **Training Harness**: Includes a dedicated trajectory collector for Replay Buffer generation.
 
 ## 🏗️ Architecture: Semantic Feedback Loop
@@ -37,7 +37,7 @@ sequenceDiagram
     Env->>Agent: Observation (Next Task, Adjusted Reward)
 ```
 
-## 📋 Task Matrices (40+ Snippets)
+## 📋 Task Matrices (100+ Snippets)
 
 | Task Configuration | Difficulty | Goal | Focus Areas |
 | :--- | :--- | :--- | :--- |
