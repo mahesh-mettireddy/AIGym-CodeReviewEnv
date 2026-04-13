@@ -1,124 +1,92 @@
----
-title: Code Review Env
-emoji: 🔍
-colorFrom: blue
-colorTo: purple
-sdk: docker
-pinned: false
-app_port: 7860
-base_path: /web
-tags:
-  - openenv
-  - code-review
-  - security
----
+# CodeReviewEnv 2.0 (OpenEnv Benchmark)
 
-# CodeReviewEnv (OpenEnv Hackathon)
+An industrial-grade OpenEnv reinforcement learning environment designed to train and evaluate AI agents on Staff-level Python code auditing. 
 
-An OpenEnv reinforcement learning environment designed to train AI agents to review Python code like a Staff-level developer. 
-
-[![OpenEnv Readiness](https://img.shields.io/badge/OpenEnv-Ready-success.svg)](#)
+[![OpenEnv Readiness](https://img.shields.io/badge/OpenEnv-V2.0_Ready-success.svg)](#)
 [![Python 3.11](https://img.shields.io/badge/Python-3.11-blue.svg)](#)
+[![License](https://img.shields.io/badge/License-BSD_3--Clause-green.svg)](#)
 
-## 📌 Motivation
+## 📌 Motivation (V2.0 Update)
 
-As AI coding companions become ubiquitous, their ability to generate code is outpacing their ability to securely audit it. **CodeReviewEnv** bridges this gap by exposing LLMs to a rigorous evaluation matrix of real-world software engineering domains: ranging from minor performance bottlenecks up to critical security vulnerabilities like Path Traversal or SQL Injection.
+Generating code is easy; auditing it for subtle architectural flaws and security vulnerabilities is where most LLMs fail. **CodeReviewEnv 2.0** transforms from a keyword-matching prototype into a **semantic powerhouse**. It uses an **LLM-as-a-Judge** architecture to evaluate agent reasoning depth, not just raw text matches.
 
-### 🔥 Expert Mode: Agentic Refinement Loop
-This environment is no longer single-shot. It implements a **Stateful Refinement Loop**:
-1. **Initial Critique**: The AI provides its first verdict.
-2. **Environment Hint**: If the verdict is imprecise, the environment provides a "Hint" and stays on the same task.
-3. **Refinement**: The agent MUST use the feedback to provided a high-precision answer, including the **Line Number** and correct **Vulnerability Class**.
+### 🔥 Major V2.0 Enhancements:
+*   **Semantic Judging**: Powered by `openenv.core.rubrics.LLMJudge`, the environment understands the *meaning* of the agent's verdict.
+*   **Confidence-Weighted Reward**: Agents are rewarded for decisive correctness and penalized for "Overconfident Hallucinations" (high confidence on a wrong answer).
+*   **Scaled Task Bank**: 40+ high-quality snippets covering async race conditions, insecure deserialization (Pickle), and O(N²) bottlenecks.
+*   **Training Harness**: Includes a dedicated trajectory collector for Replay Buffer generation.
 
-## 🏗️ Architecture & Code Flow
+## 🏗️ Architecture: Semantic Feedback Loop
 
 ```mermaid
 sequenceDiagram
-    participant Agent as LLM Agent
-    participant Env as CodeReviewEnv
+    participant Agent as LLM Agent (Policy)
+    participant Env as CodeReviewEnv 2.0
+    participant Judge as Semantic Judge (LLM)
     
-    Env->>Agent: Observation (instruction, python code_snippet)
-    Note over Agent: Agent analyzes code for<br>Bugs, Smells, or Vulcanerabilities
-    Agent-->>Env: Action (task, verdict, confidence)
+    Env->>Agent: Observation (Code Snippet + Task)
+    Agent-->>Env: Action (Verdict + Confidence)
     
     rect rgb(240, 248, 255)
-        Note left of Env: Rubric Graders<br>Evaluate Response
-        Env-->>Env: Granular Keyword Mapping
-        Env-->>Env: Compute Reward [0.01 - 0.99]
+        Note left of Env: Async Reward Loop
+        Env->>Judge: Semantic Request (Verdict vs Ground Truth)
+        Judge-->>Env: Score [0-1] & Reasoning
+        Env-->>Env: Compute Confidence-Adjusted Reward
     end
     
-    Env->>Agent: Observation (done=True, last_reward)
+    Env->>Agent: Observation (Next Task, Adjusted Reward)
 ```
 
-## 📋 Task Matrices
+## 📋 Task Matrices (40+ Snippets)
 
-| Task Configuration | Complexity | Task Name | Goal | Expected Action |
-| :--- | :--- | :--- | :--- | :--- |
-| 🟢 **Easy** | `bug_detection` | Identify fatal bugs (e.g. Race Conditions). | **Line Number** + "yes/no" |
-| 🟡 **Medium** | `code_smell` | Locate bad styling (e.g. God Objects). | **Line Number** + Smell Class |
-| 🔴 **Hard** | `improvement` | Suggest O(N²)→O(N) algorithmic refactors. | **Line Number** + Reasoning |
-| 🟣 **Expert** | `security_vulnerability` | Identify critical flaws (SQLi, Path Traversal). | **Line Number** + Fix |
+| Task Configuration | Difficulty | Goal | Focus Areas |
+| :--- | :--- | :--- | :--- |
+| 🟢 **Easy** | `bug_detection` | Identify fatal bugs. | Race conditions, Mutable Defaults, ZeroDivision. |
+| 🟡 **Medium** | `code_smell` | Locate architectural odors. | God Objects, Magic Numbers, Law of Demeter. |
+| 🔴 **Hard** | `improvement` | Suggest O(N²)→O(N) refactors. | LRU Caching, Generators, Set Operations. |
+| 🟣 **Expert** | `security_vulnerability` | Identify critical security flaws. | SQLi, Path Traversal, Pickett RCE, Shell Injection. |
 
 ## ⚙️ Core Interfaces
 
-### Action Space
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `task` | string | Current task mapped ID (e.g., `security_vulnerability`) |
-| `verdict` | string | Agent's raw textual reasoning and verdict |
-| `confidence` | float | Agent confidence index 0.0–1.0 |
-
-
-### Observation Space
-
+### Action Space (Pydantic)
 | Field | Type | Description |
 |-------|------|-------------|
 | `task` | string | Current task mapped ID |
-| `code_snippet` | string | Python code snippet requiring audit |
-| `instruction` | string | Explicit instructions for the agent's objective |
-| `last_reward` | float | Float evaluation score heavily weighted by technical exactness |
-| `done` | boolean | Signals evaluation terminal state |
+| `verdict` | string | Agent's technical reasoning and verdict |
+| `confidence` | float | **NEW**: Agent's certainty score (0.0–1.0) |
 
+### Observation Space (Pydantic)
+| Field | Type | Description |
+|-------|------|-------------|
+| `last_reward` | float | **NEW**: Multiplier-adjusted semantic score |
+| `feedback` | string | **NEW**: Adaptive feedback derived from the Judge's reasoning |
 
-## 🧠 Granular Reward Function
+## 🧠 Semantic Reward Function
 
-Rewards are deterministic and tied to high-precision auditing:
-- **0.99 [Expert]:** Identifies the issue **AND** specifies the correct **Line Number**.
-- **0.75 [Advanced]:** Identifies the issue and keywords but misses the exact line.
-- **0.40 [Partial]:** Identifies the domain but fails the technical explanation.
-- **0.01 [Failed]:** Hallucination or absolute failure.
+Rewards are no longer binary. We use a **weighted gradient**:
+*   **Correct & Confident (Score > 0.85):** Full Reward (up to 1.0).
+*   **Correct but Hesitant (Conf < 0.5):** Hesitation Penalty (0.7x multiplier).
+*   **Overconfident Hallucination (Wrong but Conf > 0.8):** Significant Penalty (-0.2).
+*   **Semantic Matching**: Understanding that "concurrency issue" is the same as "race condition."
 
-## 📡 Evaluator Endpoints
-The environment exposes standard OpenEnv probing endpoints for automated evaluation:
-- `GET /health`: System heartbeat and environment ID.
-- `GET /schema`: JSON-Schema reflection of the Action/Observation space.
-- `GET /state`: Current episode metadata and step counts.
+## 🚀 Execution & Training
 
-## 🚀 Usage
-
-### 1. Local Testing
+### 1. Run the RL Benchmark
 ```bash
-# Export inference capabilities mapping
-export HF_TOKEN="your_huggingface_token"
-
-# Run headless multi-task validation directly against the evaluation inference tracer
+export HF_TOKEN="your_token"
 python inference.py
 ```
 
-### 2. Standalone Server Mode
+### 2. Collect Training Trajectories
 ```bash
-# The server maps robust REST/WebSocket frameworks natively
+# Demonstrates trajectory collection for REINFORCE/PPO buffers
+python training/trajectory_collector.py
+```
+
+### 3. Standalone Server
+```bash
 uvicorn server.app:app --host 0.0.0.0 --port 7860
 ```
 
-### 3. Execution Trace Example
-```text
-[START] task=bug_detection env=code_review_env model=Qwen2.5-72B
-[STEP 1] Agent: "Yes, there is an issue here."
-[STEP 1] Env: "REFINEMENT: Correct issue, but please double check the line number."
-[STEP 2] Agent: "Yes, SQL Injection vulnerability on line 4."
-[END] success=true steps=2 score=0.99 rewards=[0.40, 0.99]
-```
-
-*Built specifically for the Meta PyTorch Hackathon x Scaler School of Technology.*
+---
+*Built for the Meta PyTorch Hackathon x Scaler School of Technology. Version 2.0.0 Stable.*

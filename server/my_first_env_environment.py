@@ -4,18 +4,14 @@ from openenv.core.env_server.types import State
 
 import sys
 import os
+import inspect
 
-# Robustly ensure the project root is in sys.path for headless evaluator imports
+# Robustly ensure the project root is in sys.path
 _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _root not in sys.path:
     sys.path.insert(0, _root)
 
 from models import CodeReviewAction, CodeReviewObservation
-
-# -------------------------------------------------------
-# TASK BANK
-# Real Python code snippets with known issues
-# -------------------------------------------------------
 from .tasks import TASKS
 from .graders import (
     BugDetectionGrader, 
@@ -28,27 +24,33 @@ import random
 
 class CodeReviewEnvironment(Environment):
     """
-    CodeReviewEnv — teaches AI agents to review Python code.
-    4 tasks: bug detection, code smell, improvement suggestion, security auditing.
+    CodeReviewEnv 2.0 — Production-grade RL environment for LLMs.
+    Features: Semantic Judging, 40+ snippets, and Multi-turn refinement.
     """
 
     SUPPORTS_CONCURRENT_SESSIONS: bool = True
     TASKS = ["bug_detection", "code_smell", "improvement", "security_vulnerability"]
 
     def __init__(self):
+        super().__init__()
         self._state = State(episode_id=str(uuid4()), step_count=0)
         self._current_task = None
         self._current_snippet = None
         self._task_index = 0
         self._substep_index = 0
-        # Auto-load first task so env is valid even without explicit reset
+        self._total_score = 0.0
 
-    def reset(self) -> CodeReviewObservation:
+    def reset(self, **kwargs) -> CodeReviewObservation:
+        """Sync reset (fallback)."""
         self._state = State(episode_id=str(uuid4()), step_count=0)
         self._task_index = 0
         self._substep_index = 0
         self._total_score = 0.0
         return self._load_task(0)
+
+    async def reset_async(self, **kwargs) -> CodeReviewObservation:
+        """Async reset used by modern clients."""
+        return self.reset(**kwargs)
 
     def _load_task(self, index) -> CodeReviewObservation:
         task_name = self.TASKS[index]
@@ -67,19 +69,21 @@ class CodeReviewEnvironment(Environment):
             feedback=""
         )
 
-    def step(self, action: CodeReviewAction) -> CodeReviewObservation:
+    async def step_async(self, action: CodeReviewAction, **kwargs) -> CodeReviewObservation:
+        """Async step to support semantic LLM-as-a-judge calls."""
         self._state.step_count += 1
-        reward = self._grade(action)
+        
+        # 1. Compute Semantic Reward
+        reward = await self._grade_async(action)
         self._total_score += reward
         
         feedback = self._get_feedback(action, reward)
 
-        # Multi-turn logic: 2 attempts per snippet if reward is not perfect
-        can_refine = self._substep_index == 0 and reward < 0.90
+        # 2. Multi-turn logic: Allow 1 refinement per snippet if score is low
+        can_refine = self._substep_index == 0 and reward < 0.85
         
         if can_refine:
             self._substep_index += 1
-            # Return same observation with feedback and hint
             return CodeReviewObservation(
                 task=self._current_task,
                 code_snippet=self._current_snippet["code"],
@@ -91,7 +95,7 @@ class CodeReviewEnvironment(Environment):
                 feedback=feedback
             )
 
-        # Move to next task
+        # 3. Handle Transitions
         self._task_index += 1
         self._substep_index = 0
         done = self._task_index >= len(self.TASKS)
@@ -115,16 +119,19 @@ class CodeReviewEnvironment(Environment):
             next_obs.feedback = feedback
             return next_obs
 
+    def step(self, action: CodeReviewAction, **kwargs) -> CodeReviewObservation:
+        """Synchronous fallback (not recommended for Semantic Judging)."""
+        import asyncio
+        return asyncio.run(self.step_async(action))
+
     def _normalize(self, text: str) -> str:
         import re
         return re.sub(r'[^\w\s]', ' ', text.lower()).strip()
 
-    def _grade(self, action: CodeReviewAction) -> float:
-        """Delegate grading to the Source of Truth: The Grader Rubrics."""
+    async def _grade_async(self, action: CodeReviewAction) -> float:
+        """Delegate to Async Semantic Graders."""
         task = self._current_task
-        observation = {
-            "code_snippet": self._current_snippet["code"]
-        }
+        observation = {"code_snippet": self._current_snippet["code"]}
         
         graders = {
             "bug_detection": BugDetectionGrader(),
@@ -134,20 +141,22 @@ class CodeReviewEnvironment(Environment):
         }
         
         grader = graders.get(task)
-        if not grader:
-            return 0.01
+        if not grader: return 0.01
             
-        return grader.forward(action, observation)
+        result = grader.forward(action, observation)
+        if inspect.iscoroutine(result):
+            return await result
+        return result
 
     def _get_feedback(self, action: CodeReviewAction, reward: float) -> str:
         """Provide explanatory hints based on current performance."""
         if reward >= 0.90:
-            return "Perfect! You correctly identified the issue and the line number."
+            return "Excellent technical audit. High semantic match with ground truth."
         if reward >= 0.70:
-            return "Correct issue, but please double check the line number."
+            return "Good observation, but logic could be more precise."
         if reward >= 0.40:
-            return f"Partially correct. {self._current_snippet['explanation']}"
-        return "Incorrect. Please review the code carefully for logical or architectural flaws."
+            return f"Partially correct. Hint: {self._current_snippet['explanation']}"
+        return "Incorrect. The agent failed to identify the core technical vulnerability or algorithmic flaw."
 
     @property
     def state(self) -> State:

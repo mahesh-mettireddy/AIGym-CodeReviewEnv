@@ -1,168 +1,111 @@
 <div align="center">
-  <h1>🧠 CodeReviewEnv</h1>
-  <p><strong>An advanced Reinforcement Learning Evaluation Engine for Large Language Models</strong></p>
+  <h1>🧠 CodeReviewEnv 2.0</h1>
+  <p><strong>Industrial-Grade RL Benchmarking Engine for AI Code Auditing</strong></p>
   
   [![OpenEnv](https://img.shields.io/badge/Powered_by-OpenEnv-blue?style=for-the-badge)](https://github.com/facebookresearch/openenv)
   [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=FastAPI&logoColor=white)](https://fastapi.tiangolo.com/)
-  [![HuggingFace Space](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-yellow?style=for-the-badge)](https://huggingface.co/)
+  [![Semantic Judging](https://img.shields.io/badge/Grading-Semantic_Judge-purple?style=for-the-badge)](#)
 </div>
 
 ---
 
-## 📖 Introduction
+## 📖 Introduction (V2.0)
 
-**CodeReviewEnv** is an interactive benchmarking engine designed for the Meta x Scaler OpenEnv AI Hackathon. 
+**CodeReviewEnv 2.0** is an interactive reinforcement learning (RL) simulator designed to evaluate if an LLM can perform the duties of a Staff Software Engineer. 
 
-Instead of passing a static prompt to an AI, this environment acts as a **Reinforcement Learning Simulator**. It challenges an AI agent to perform the duties of a Senior Software Engineer. The AI is placed into a multi-step episode where it is progressively tested on evaluating Python code, identifying bugs, and suggesting architectural refactors.
-
-> [!TIP]
-> This environment is specifically built to test **Agentic Workflows**. It proves whether an AI can analyze code, maintain state across multiple requests, and interpret strict feedback to adjust its reasoning.
+Unlike primitive "keyword-matching" environments, V2.0 uses a **Semantic Judge** (LLM-as-a-Judge) to grade agent verdicts based on technical nuance, location precision, and confidence calibration.
 
 ---
 
-## 🏗️ Architecture & Code Flow
-
-At its core, this project uses a standard **Server-Client architecture** heavily optimized for AI inference loops.
+## 🏗️ Architecture: The Semantic Loop
 
 ### The RL Loop Visualization
 
 ```mermaid
 sequenceDiagram
-    participant Agent as AI Model (e.g. Qwen 72B)
-    participant Server as CodeReviewEnv (FastAPI)
+    participant Agent as Agent Policy (LLM)
+    participant Server as CodeReviewEnv 2.0
+    participant Judge as Semantic Judge (LLM)
     
-    Note over Agent, Server: Episode Starts
-    Agent->>Server: HTTP POST /reset
-    Server-->>Agent: Observation (Task: Bug Detection, Code Snippet)
+    Note over Agent, Server: Episode Starts (Async)
+    Agent->>Server: POST /reset
+    Server-->>Agent: Observation (Code Snippet)
     
-    Note over Agent: AI analyzes code...
-    Agent->>Server: HTTP POST /step (Action: Verdict & Confidence)
+    Note over Agent: Agent performs Audit...
+    Agent->>Server: POST /step (Verdict + Confidence)
     
-    alt Correct Verdict
-        Server-->>Agent: Reward: 1.0 + Next Observation
-    else Incorrect Verdict
-        Server-->>Agent: Reward: 0.0 + Detailed Feedback + Next Observation
+    rect rgb(240, 240, 240)
+        Server->>Judge: Evaluate(Verdict, Ground Truth)
+        Judge-->>Server: Score (0.0-1.0) + Feedback
     end
     
-    Note over Agent, Server: Loop continues until all tasks are complete
+    Note over Server: Apply Confidence Multiplier
+    
+    Server-->>Agent: Reward + Next Observation
 ```
 
-### The Progressive Task Curriculum
+### The Progressive Task Curriculum (40+ Snippets)
 
-The environment forces the AI model to evolve through four distinct difficulty tiers. To get a maximum reward (0.99), the agent **must** specify the correct Line Number.
+The environment contains a scaled bank of high-complexity snippets across four tiers:
 
-| Complexity | Task Name | Goal | Expected Action |
+| Complexity | Task Name | Goal | Focus Areas |
 | :--- | :--- | :--- | :--- |
-| 🟢 **Easy** | `bug_detection` | Identify fatal bugs (e.g. Race Conditions). | **Line Number** + "yes/no" |
-| 🟡 **Medium** | `code_smell` | Locate bad styling (e.g. God Objects). | **Line Number** + Smell Class |
-| 🔴 **Hard** | `improvement` | Suggest O(N²)→O(N) algorithmic refactors. | **Line Number** + Reasoning |
-| 🟣 **Expert** | `security_vulnerability` | Identify critical flaws (SQLi, Path Traversal). | **Line Number** + Fix |
+| 🟢 **Easy** | `bug_detection` | Identify fatal bugs. | Race Conditions, Mutable Defaults. |
+| 🟡 **Medium** | `code_smell` | Locate architectural odors. | God Objects, Magic Numbers. |
+| 🔴 **Hard** | `improvement` | Suggest algo refactors. | O(N²) bottlenecks, Caching. |
+| 🟣 **Expert** | `security_vulnerability` | Identify critical flaws. | SQLi, Pickle RCE, Path Traversal. |
 
 ---
 
-## 🛠️ Technical Specifications
+## 📊 Reward Mechanics: Beyond Binary
 
-### Modular Architecture
-The environment logic is decoupled for maximum stability:
-- **`server/tasks.py`**: Central source of truth for all 12 evaluation snippets.
-- **`server/graders.py`**: Atomic Rubric classes for deterministic scoring.
-- **`server/my_first_env_environment.py`**: State machine for multi-turn episodes.
+V2.0 implements a **Confidence-Aware Reward Signal** to discourage hallucinations:
 
-### Evaluator API Endpoints
-- `/health`: GET — Returns system status and environment identity.
-- `/schema`: GET — Returns Pydantic-powered action/observation JSON schemas.
-- `/state`: GET — Returns the current episode state and step metrics.
-- `/reset`: POST — Cycles the environment to the next task sequence.
-- `/step`: POST — Submits an agent action to the rubric engine.
-
-## 🛠️ The Technology Stack
-
-This project leverages modern Python infrastructure to ensure millisecond-latency API responses.
-
-*   🐍 **Python 3.11** - The core execution layer.
-*   🤖 **OpenEnv Framework** - Meta's standard protocol for standardizing Agent-to-Environment communication.
-*   ⚡ **FastAPI & Uvicorn** - An asynchronous HTTP web server connecting the Python logic to the internet.
-*   🛡️ **Pydantic** - Strict data-validation. It ensures that if an AI hallucinates a bad JSON response, the server rejects it gracefully.
-*   🐳 **Docker** - The entire engine is containerized using `python:3.11-slim` for maximum portability.
-*   ☁️ **HuggingFace Spaces** - Serverless GPU/CPU deployment ensuring the environment is publicly accessible 24/7.
+*   **Semantic Similarity**: The `SemanticJudge` uses a model (e.g. Qwen 72B) to compare the agent's reasoning against the ground truth.
+*   **Confidence Multiplier**: 
+    *   Correct + High Confidence = **1.1x Reward Bonus**
+    *   Correct + Low Confidence = **0.8x Hesitation Penalty**
+    *   Incorrect + High Confidence = **-0.2x Hallucination Penalty**
 
 ---
 
 ## 📁 Repository Structure
 
-> [!NOTE]  
-> All files are modular to allow researchers to easily update the task logic without breaking the server API.
-
 ```text
 my_first_env/
-├── openenv.yaml                   # 📜 OpenEnv Manifest (Declares tasks and models)
-├── README.md                      # 📖 Main repository documentation
-├── PROJECT_DOCUMENTATION.md       # 🧠 Deep-dive architecture & manual
-├── models.py                      # 🏗️ Pydantic Action/Observation Schemas
-├── client.py                      # 📡 Client SDK mapping for OpenEnv
-├── inference.py                   # 🤖 Benchmark Evaluation Script (Testing Qwen 72B)
-├── _upload_hf.py                  # ☁️ Automated deployment script
+├── openenv.yaml                   # 📜 OpenEnv Manifest
+├── README.md                      # 📖 V2.0 Marketing & Quickstart
+├── PROJECT_DOCUMENTATION.md       # 🧠 Technical Architecture Deep-Dive
+├── models.py                      # 🏗️ Pydantic Schemas
+├── client.py                      # 📡 Client SDK (Async-ready)
+├── inference.py                   # 🤖 Benchmark Evaluation Trace
 ├── server/
-│   ├── app.py                     # 🌐 FastAPI wrapper exposing /reset and /step REST routes
-│   ├── graders.py                 # ⚖️ Formal Rubric Graders (Refined Logic)
-│   ├── my_first_env_environment.py# 🧠 Core Simulation Logic (Episodes, Grading, State Management)
-│   ├── requirements.txt           # 📦 Dependency list
-│   └── Dockerfile                 # 🐳 Production Image Blueprint
+│   ├── app.py                     # 🌐 FastAPI Engine
+│   ├── judge_client.py            # ⚖️ [NEW] Semantic Judge Wrapper
+│   ├── graders.py                 # ⚖️ [NEW] Async Semantic Rubrics
+│   ├── tasks.py                   # 📦 [NEW] Expanded Bank (40+ Snippets)
+│   └── my_first_env_environment.py# 🧠 Async State Machine
+├── training/
+│   └── trajectory_collector.py     # 🏃 [NEW] RL Training Harness Example
+└── tests/
+    └── test_env.py                # 🧪 [NEW] Integration Test Suite
 ```
 
 ---
 
-## 🚀 How to Execute & Use
+## 🚀 RL Training Example
 
-### 1. The Interactive Web UI (Human Mode)
-The deployed environment automatically generates a graphical user interface (powered by Gradio). You can test the exact tasks the AI sees.
-
-1. Navigate to: **[https://huggingface.co/spaces/mahesh16/code-review-env](https://huggingface.co/spaces/mahesh16/code-review-env)**
-2. Click **Reset** to start a session.
-3. Review the code snippet, type your answer in the `Verdict` box, and click **Step**.
-
----
-
-### 2. Connect an AI Agent (Programmatic REST API)
-Any LLM framework (LangChain, AutoGen, raw Python) can communicate directly with your engine over HTTP.
+To satisfy the requirement for a true RL training loop, see `training/trajectory_collector.py`. It demonstrates how a policy can interact with the client to populate a **Replay Buffer**:
 
 ```python
-import requests
-
-BASE_URL = "https://mahesh16-code-review-env.hf.space"
-
-# 1. Initialize the Environment
-res = requests.post(f"{BASE_URL}/reset", json={})
-observation = res.json()["observation"]
-print(f"Target Task: {observation['task']}")
-print(f"Code to evaluate:\n{observation['code_snippet']}")
-
-# 2. Submit AI Answer
-action_payload = {
-    "action": {
-        "task": observation["task"],
-        "verdict": "yes, there is a severe bug",
-        "confidence": 0.95
-    }
-}
-new_state = requests.post(f"{BASE_URL}/step", json=action_payload)
-
-# 3. Analyze the Environment's Grading
-print("Reward Achieved:", new_state.json()["reward"])
+async with CodeReviewEnv(base_url=URL) as client:
+    obs = await client.reset()
+    while not obs.done:
+        action = policy(obs) # Agent Policy
+        result = await client.step(action)
+        buffer.append(transition) # Collect experience
 ```
 
 ---
+*Developed for the Meta x Scaler OpenEnv Hackathon.* 
 
-### 3. Running the Qwen 72B Benchmark Locally
-This project ships with `inference.py`, an OpenEnv Agent script that automatically calls the HuggingFace Inference Router to benchmark the `Qwen/Qwen2.5-72B-Instruct` model against your environment.
-
-> [!IMPORTANT]
-> To run this evaluation, you must have a HuggingFace Token with **"Make calls to the serverless Inference API"** enabled.
-
-```powershell
-# Set your token
-$env:HF_TOKEN = "your_hf_read_token_here"
-
-# Execute the Benchmark
-python inference.py
-```

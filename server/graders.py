@@ -1,8 +1,8 @@
 from openenv.core.rubrics.base import Rubric
 import re
-
-# We import the TASKS from our standalone tasks file
+import asyncio
 from .tasks import TASKS
+from .judge_client import SemanticJudge
 
 def normalize(text: str) -> str:
     return re.sub(r'[^\w\s]', ' ', str(text).lower()).strip()
@@ -12,86 +12,128 @@ def get_line_match(text: str, target_line: int) -> bool:
     found_lines = re.findall(r'line\s*(?::|#)?\s*(\d+)', text.lower())
     return any(int(l) == target_line for l in found_lines)
 
-class BugDetectionGrader(Rubric):
-    def forward(self, action: dict, observation: dict) -> float:
-        # Support both Pydantic objects and raw dicts
+class BaseCodeReviewGrader(Rubric):
+    def __init__(self):
+        super().__init__()
+        self.judge = SemanticJudge()
+
+    def _get_confidence_multiplier(self, confidence: float, is_correct: bool) -> float:
+        """
+        Adjust reward based on agent confidence.
+        High Confidence + Wrong = Penalty.
+        Low Confidence + Right = Smaller Reward (hesitancy).
+        """
+        # Ensure confidence is a float
+        try:
+            conf = float(confidence)
+        except (TypeError, ValueError):
+            conf = 0.5
+
+        if is_correct:
+            if conf >= 0.9: return 1.0  # Decisive Correctness
+            if conf <= 0.4: return 0.7  # "Lucky guess" penalty
+            return 0.85
+        else:
+            if conf >= 0.8: return -0.2 # "Overconfident Hallucination" penalty
+            return 0.0
+            
+    async def forward(self, action: dict, observation: dict) -> float:
+        # Implementation in subclasses
+        return 0.0
+
+class BugDetectionGrader(BaseCodeReviewGrader):
+    async def forward(self, action: dict, observation: dict) -> float:
         v_raw = action.verdict if hasattr(action, 'verdict') else action.get('verdict', '')
-        verdict = normalize(v_raw)
-        
+        conf_raw = action.confidence if hasattr(action, 'confidence') else action.get('confidence', 0.5)
         o_code = observation.code_snippet if hasattr(observation, 'code_snippet') else observation.get('code_snippet', '')
         
         snippet_data = next((s for s in TASKS["bug_detection"]["snippets"] if s["code"].strip() == o_code.strip()), None)
         if not snippet_data: return 0.01
 
-        has_bug = snippet_data["has_bug"]
-        has_correct_line = get_line_match(str(v_raw), snippet_data["target_line"])
-        said_yes = "yes" in verdict
-        said_no = "no" in verdict
-
-        if has_bug and said_yes:
-            matches = sum(1 for kw in snippet_data["keywords"] if kw in verdict)
-            if has_correct_line:
-                if matches >= 2: return 0.99
-                return 0.75
-            return 0.40
-        elif not has_bug and said_no:
-            return 0.99
-        elif has_bug and said_no:
-            return 0.01
-        elif not has_bug and said_yes:
-            return 0.01
-        return 0.1
-
-class CodeSmellGrader(Rubric):
-    def forward(self, action: dict, observation: dict) -> float:
-        v_raw = action.verdict if hasattr(action, 'verdict') else action.get('verdict', '')
+        # 1. Fast Path: Brittle Keyword Check (Baseline)
         verdict = normalize(v_raw)
+        has_bug = snippet_data["has_bug"]
+        said_yes = "yes" in verdict
+        
+        is_binary_correct = (has_bug and said_yes) or (not has_bug and "no" in verdict)
+        
+        if not is_binary_correct:
+            return 0.01 + self._get_confidence_multiplier(conf_raw, False)
+
+        # 2. Slow Path: Semantic Judge for Nuance
+        result = await self.judge.evaluate(
+            "bug_detection", 
+            o_code, 
+            str(v_raw), 
+            snippet_data["explanation"]
+        )
+        
+        base_reward = result.score
+        
+        # 3. Factor in confidence
+        final_reward = base_reward * self._get_confidence_multiplier(conf_raw, True)
+        
+        return max(0.01, min(1.0, final_reward))
+
+class CodeSmellGrader(BaseCodeReviewGrader):
+    async def forward(self, action: dict, observation: dict) -> float:
+        v_raw = action.verdict if hasattr(action, 'verdict') else action.get('verdict', '')
+        conf_raw = action.confidence if hasattr(action, 'confidence') else action.get('confidence', 0.5)
         o_code = observation.code_snippet if hasattr(observation, 'code_snippet') else observation.get('code_snippet', '')
         
         snippet_data = next((s for s in TASKS["code_smell"]["snippets"] if s["code"].strip() == o_code.strip()), None)
         if not snippet_data: return 0.01
 
-        has_correct_line = get_line_match(str(v_raw), snippet_data["target_line"])
-        matches = sum(1 for smell in snippet_data["smells"] if smell in verdict)
+        result = await self.judge.evaluate(
+            "code_smell", 
+            o_code, 
+            str(v_raw), 
+            snippet_data["explanation"]
+        )
         
-        if has_correct_line:
-            if matches >= 2: return 0.99
-            if matches == 1: return 0.75
-        if matches >= 1: return 0.40
-        return 0.01
+        is_correct = result.score >= 0.7
+        multiplier = self._get_confidence_multiplier(conf_raw, is_correct)
+        
+        return max(0.01, min(0.99, result.score * multiplier))
 
-class ImprovementGrader(Rubric):
-    def forward(self, action: dict, observation: dict) -> float:
+class ImprovementGrader(BaseCodeReviewGrader):
+    async def forward(self, action: dict, observation: dict) -> float:
         v_raw = action.verdict if hasattr(action, 'verdict') else action.get('verdict', '')
-        verdict = normalize(v_raw)
+        conf_raw = action.confidence if hasattr(action, 'confidence') else action.get('confidence', 0.5)
         o_code = observation.code_snippet if hasattr(observation, 'code_snippet') else observation.get('code_snippet', '')
         
         snippet_data = next((s for s in TASKS["improvement"]["snippets"] if s["code"].strip() == o_code.strip()), None)
         if not snippet_data: return 0.01
 
-        has_correct_line = get_line_match(str(v_raw), snippet_data["target_line"])
-        matches = sum(1 for imp in snippet_data["improvements"] if imp in verdict)
+        result = await self.judge.evaluate(
+            "improvement", 
+            o_code, 
+            str(v_raw), 
+            snippet_data["explanation"]
+        )
         
-        if has_correct_line:
-            if matches >= 2: return 0.99
-            if matches == 1: return 0.80
-        if matches >= 1: return 0.40
-        return 0.01
+        is_correct = result.score >= 0.7
+        multiplier = self._get_confidence_multiplier(conf_raw, is_correct)
+        
+        return max(0.01, min(0.99, result.score * multiplier))
 
-class SecurityGrader(Rubric):
-    def forward(self, action: dict, observation: dict) -> float:
+class SecurityGrader(BaseCodeReviewGrader):
+    async def forward(self, action: dict, observation: dict) -> float:
         v_raw = action.verdict if hasattr(action, 'verdict') else action.get('verdict', '')
-        verdict = normalize(v_raw)
+        conf_raw = action.confidence if hasattr(action, 'confidence') else action.get('confidence', 0.5)
         o_code = observation.code_snippet if hasattr(observation, 'code_snippet') else observation.get('code_snippet', '')
         
         snippet_data = next((s for s in TASKS["security_vulnerability"]["snippets"] if s["code"].strip() == o_code.strip()), None)
         if not snippet_data: return 0.01
 
-        has_correct_line = get_line_match(str(v_raw), snippet_data["target_line"])
-        matches = sum(1 for flaw in snippet_data["flaws"] if flaw in verdict)
+        result = await self.judge.evaluate(
+            "security_vulnerability", 
+            o_code, 
+            str(v_raw), 
+            snippet_data["explanation"]
+        )
         
-        if has_correct_line:
-            if matches >= 2: return 0.99
-            if matches == 1: return 0.85
-        if matches >= 1: return 0.40
-        return 0.01
+        is_correct = result.score >= 0.7
+        multiplier = self._get_confidence_multiplier(conf_raw, is_correct)
+        
+        return max(0.01, min(0.99, result.score * multiplier))
