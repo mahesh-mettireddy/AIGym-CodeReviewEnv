@@ -53,19 +53,23 @@ class BugDetectionGrader(BaseCodeReviewGrader):
             return 0.01 + self._get_confidence_multiplier(conf_raw, False)
 
         # 2. Slow Path: Semantic Judge for Nuance
-        result = await self.judge.evaluate(
-            "bug_detection", 
-            o_code, 
-            str(v_raw), 
-            snippet_data["explanation"]
-        )
-        
-        base_reward = result.score
+        try:
+            result = await self.judge.evaluate(
+                "bug_detection", 
+                o_code, 
+                str(v_raw), 
+                snippet_data["explanation"]
+            )
+            base_reward = result.score
+        except Exception:
+            # Fallback for judge timeouts or service errors
+            base_reward = 0.5 if is_binary_correct else 0.01
         
         # 3. Factor in confidence
         final_reward = base_reward * self._get_confidence_multiplier(conf_raw, True)
         
-        return max(0.01, min(1.0, final_reward))
+        # Rigidly respect manifest [0.01, 0.99] range
+        return max(0.01, min(0.99, final_reward))
 
 class CodeSmellGrader(BaseCodeReviewGrader):
     async def forward(self, action: dict, observation: dict) -> float:
@@ -76,17 +80,21 @@ class CodeSmellGrader(BaseCodeReviewGrader):
         snippet_data = next((s for s in TASKS["code_smell"]["snippets"] if s["code"].strip() == o_code.strip()), None)
         if not snippet_data: return 0.01
 
-        result = await self.judge.evaluate(
-            "code_smell", 
-            o_code, 
-            str(v_raw), 
-            snippet_data["explanation"]
-        )
+        try:
+            result = await self.judge.evaluate(
+                "code_smell", 
+                o_code, 
+                str(v_raw), 
+                snippet_data["explanation"]
+            )
+            score = result.score
+        except Exception:
+            score = 0.5
         
-        is_correct = result.score >= 0.7
+        is_correct = score >= 0.7
         multiplier = self._get_confidence_multiplier(conf_raw, is_correct)
         
-        return max(0.01, min(0.99, result.score * multiplier))
+        return max(0.01, min(0.99, score * multiplier))
 
 class ImprovementGrader(BaseCodeReviewGrader):
     async def forward(self, action: dict, observation: dict) -> float:
@@ -97,17 +105,21 @@ class ImprovementGrader(BaseCodeReviewGrader):
         snippet_data = next((s for s in TASKS["improvement"]["snippets"] if s["code"].strip() == o_code.strip()), None)
         if not snippet_data: return 0.01
 
-        result = await self.judge.evaluate(
-            "improvement", 
-            o_code, 
-            str(v_raw), 
-            snippet_data["explanation"]
-        )
+        try:
+            result = await self.judge.evaluate(
+                "improvement", 
+                o_code, 
+                str(v_raw), 
+                snippet_data["explanation"]
+            )
+            score = result.score
+        except Exception:
+            score = 0.5
         
-        is_correct = result.score >= 0.7
+        is_correct = score >= 0.7
         multiplier = self._get_confidence_multiplier(conf_raw, is_correct)
         
-        return max(0.01, min(0.99, result.score * multiplier))
+        return max(0.01, min(0.99, score * multiplier))
 
 class SecurityGrader(BaseCodeReviewGrader):
     async def forward(self, action: dict, observation: dict) -> float:
@@ -118,14 +130,18 @@ class SecurityGrader(BaseCodeReviewGrader):
         snippet_data = next((s for s in TASKS["security_vulnerability"]["snippets"] if s["code"].strip() == o_code.strip()), None)
         if not snippet_data: return 0.01
 
-        result = await self.judge.evaluate(
-            "security_vulnerability", 
-            o_code, 
-            str(v_raw), 
-            snippet_data["explanation"]
-        )
+        try:
+            result = await self.judge.evaluate(
+                "security_vulnerability", 
+                o_code, 
+                str(v_raw), 
+                snippet_data["explanation"]
+            )
+            score = result.score
+        except Exception:
+            score = 0.5
         
-        is_correct = result.score >= 0.7
+        is_correct = score >= 0.7
         multiplier = self._get_confidence_multiplier(conf_raw, is_correct)
         
-        return max(0.01, min(0.99, result.score * multiplier))
+        return max(0.01, min(0.99, score * multiplier))

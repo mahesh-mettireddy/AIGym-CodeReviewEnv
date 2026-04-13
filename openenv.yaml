@@ -1,5 +1,5 @@
 name: code_review_env
-version: "1.0.0"
+version: "2.1.0"
 description: >
   An RL environment where AI agents learn to review Python code.
   Tasks range from bug detection (easy) to improvement suggestions (hard).
