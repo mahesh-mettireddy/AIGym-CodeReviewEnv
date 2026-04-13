@@ -35,6 +35,13 @@ class CodeReviewEnvironment(Environment):
     SUPPORTS_CONCURRENT_SESSIONS: bool = True
     TASKS = ["bug_detection", "code_smell", "improvement", "security_vulnerability"]
 
+    # Confidence calibration constants
+    CONFIDENCE_CORRECT_THRESHOLD: float = 0.40  # base reward at or above this is "correct direction"
+    CONFIDENCE_CORRECT_FLOOR: float = 0.70       # minimum multiplier for correct answers (at confidence=0)
+    CONFIDENCE_CORRECT_SCALE: float = 0.30       # additional multiplier gain per unit confidence (correct)
+    CONFIDENCE_WRONG_PENALTY: float = 0.50       # maximum fractional penalty for overconfident wrong answers
+    CONFIDENCE_MIN_REWARD: float = 0.001         # floor to prevent reward collapsing to exactly zero
+
     def __init__(self):
         super().__init__()
         self._state = State(episode_id=str(uuid4()), step_count=0)
@@ -43,6 +50,13 @@ class CodeReviewEnvironment(Environment):
         self._task_index = 0
         self._substep_index = 0
         self._total_score = 0.0
+        # Instantiate graders once per environment; reused across all steps.
+        self._graders = {
+            "bug_detection": BugDetectionGrader(),
+            "code_smell": CodeSmellGrader(),
+            "improvement": ImprovementGrader(),
+            "security_vulnerability": SecurityGrader(),
+        }
 
     def reset(self) -> CodeReviewObservation:
         self._state = State(episode_id=str(uuid4()), step_count=0)
@@ -118,23 +132,30 @@ class CodeReviewEnvironment(Environment):
 
     def _grade(self, action: CodeReviewAction) -> float:
         """Delegate grading to the Source of Truth: The Grader Rubrics."""
-        task = self._current_task
-        observation = {
-            "code_snippet": self._current_snippet["code"]
-        }
-        
-        graders = {
-            "bug_detection": BugDetectionGrader(),
-            "code_smell": CodeSmellGrader(),
-            "improvement": ImprovementGrader(),
-            "security_vulnerability": SecurityGrader()
-        }
-        
-        grader = graders.get(task)
+        grader = self._graders.get(self._current_task)
         if not grader:
             return 0.01
-            
-        return grader.forward(action, observation)
+        observation = {"code_snippet": self._current_snippet["code"]}
+        base_reward = grader.forward(action, observation)
+        return self._apply_confidence(action.confidence, base_reward)
+
+    def _apply_confidence(self, confidence: float, base_reward: float) -> float:
+        """Scale reward by agent confidence to incentivise calibration.
+
+        Correct answers (base_reward >= CONFIDENCE_CORRECT_THRESHOLD):
+            reward *= (CONFIDENCE_CORRECT_FLOOR + CONFIDENCE_CORRECT_SCALE * confidence)
+            → Full reward at confidence=1.0; gentle reduction at confidence=0.0.
+
+        Wrong answers (base_reward < CONFIDENCE_CORRECT_THRESHOLD):
+            reward *= (1.0 − CONFIDENCE_WRONG_PENALTY * confidence)
+            → Overconfident wrong answers are penalised up to 50%;
+              low-confidence wrong answers receive the baseline failure reward.
+        """
+        c = max(0.0, min(1.0, confidence))
+        if base_reward >= self.CONFIDENCE_CORRECT_THRESHOLD:
+            return round(base_reward * (self.CONFIDENCE_CORRECT_FLOOR + self.CONFIDENCE_CORRECT_SCALE * c), 4)
+        else:
+            return round(max(self.CONFIDENCE_MIN_REWARD, base_reward * (1.0 - self.CONFIDENCE_WRONG_PENALTY * c)), 4)
 
     def _get_feedback(self, action: CodeReviewAction, reward: float) -> str:
         """Provide explanatory hints based on current performance."""

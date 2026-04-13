@@ -126,7 +126,7 @@ class TestSecurityGrader:
 
 
 # ---------------------------------------------------------------------------
-# Environment initialisation guard (_total_score)
+# Environment initialisation guard (_total_score and _graders)
 # ---------------------------------------------------------------------------
 
 class TestEnvironmentInit:
@@ -140,3 +140,55 @@ class TestEnvironmentInit:
         env2 = CodeReviewEnvironment()
         assert hasattr(env2, "_total_score"), "_total_score must be set in __init__"
         assert env2._total_score == 0.0
+
+    def test_graders_are_singletons(self):
+        """All four graders must be instantiated once in __init__ and reused across steps."""
+        from server.my_first_env_environment import CodeReviewEnvironment
+        env = CodeReviewEnvironment()
+        expected_keys = {"bug_detection", "code_smell", "improvement", "security_vulnerability"}
+        assert expected_keys == set(env._graders.keys())
+        # Same object on repeated dict access — no per-call re-instantiation
+        for key in expected_keys:
+            assert env._graders[key] is env._graders[key]
+
+
+# ---------------------------------------------------------------------------
+# Confidence calibration (_apply_confidence)
+# ---------------------------------------------------------------------------
+
+class TestConfidenceScaling:
+    """_apply_confidence must reward calibrated agents and penalise overconfident wrong answers."""
+
+    def setup_method(self):
+        from server.my_first_env_environment import CodeReviewEnvironment
+        self.env = CodeReviewEnvironment()
+
+    def test_expert_with_full_confidence_unchanged(self):
+        # 0.99 * (FLOOR + SCALE * 1.0) = 0.99 * 1.0
+        assert self.env._apply_confidence(1.0, 0.99) == 0.99
+
+    def test_expert_with_zero_confidence_reduced(self):
+        # 0.99 * (FLOOR + SCALE * 0.0) = 0.99 * FLOOR
+        expected = round(0.99 * self.env.CONFIDENCE_CORRECT_FLOOR, 4)
+        assert self.env._apply_confidence(0.0, 0.99) == expected
+
+    def test_failed_with_full_confidence_penalised(self):
+        # 0.01 * (1.0 - PENALTY * 1.0) = 0.01 * 0.5
+        expected = round(0.01 * (1.0 - self.env.CONFIDENCE_WRONG_PENALTY), 4)
+        assert self.env._apply_confidence(1.0, 0.01) == expected
+
+    def test_failed_with_zero_confidence_baseline(self):
+        # 0.01 * (1.0 - PENALTY * 0.0) = 0.01
+        assert self.env._apply_confidence(0.0, 0.01) == 0.01
+
+    def test_confidence_clamped_above_one(self):
+        # confidence=1.5 treated as 1.0
+        assert self.env._apply_confidence(1.5, 0.99) == self.env._apply_confidence(1.0, 0.99)
+
+    def test_confidence_clamped_below_zero(self):
+        # confidence=-0.5 treated as 0.0
+        assert self.env._apply_confidence(-0.5, 0.01) == self.env._apply_confidence(0.0, 0.01)
+
+    def test_minimum_floor_prevents_zero_reward(self):
+        # Even the smallest base reward stays above CONFIDENCE_MIN_REWARD
+        assert self.env._apply_confidence(1.0, 0.001) >= self.env.CONFIDENCE_MIN_REWARD

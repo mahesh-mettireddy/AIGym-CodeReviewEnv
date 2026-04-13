@@ -83,11 +83,21 @@ sequenceDiagram
 
 ## 🧠 Granular Reward Function
 
-Rewards are deterministic and tied to high-precision auditing:
+Rewards are deterministic, tied to high-precision auditing, and modulated by the agent's `confidence` field.
+
+### Base Reward Tiers
 - **0.99 [Expert]:** Identifies the issue **AND** specifies the correct **Line Number**.
-- **0.75 [Advanced]:** Identifies the issue and keywords but misses the exact line.
+- **0.75–0.85 [Advanced]:** Identifies the issue and keywords but misses the exact line.
 - **0.40 [Partial]:** Identifies the domain but fails the technical explanation.
 - **0.01 [Failed]:** Hallucination or absolute failure.
+
+### Confidence Modifier
+The `confidence` field (0.0–1.0) applies a calibration multiplier that incentivises well-calibrated agents:
+
+| Outcome | Formula | Effect |
+|---------|---------|--------|
+| Correct (base ≥ 0.40) | `base × (0.70 + 0.30 × confidence)` | Full reward at confidence=1.0; ~30% reduction when unsure but right |
+| Wrong (base < 0.40) | `base × (1.0 − 0.50 × confidence)` | Overconfident wrong answers penalised up to 50%; uncertain wrong answers keep baseline |
 
 ## 📡 Evaluator Endpoints
 The environment exposes standard OpenEnv probing endpoints for automated evaluation:
