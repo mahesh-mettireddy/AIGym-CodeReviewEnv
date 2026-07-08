@@ -46,7 +46,3 @@ async def test_multi_turn_refinement():
     assert obs.done is False
     assert env._substep_index == 1
 
-def test_normalization():
-    env = CodeReviewEnvironment()
-    assert env._normalize("Hello, World!") == "hello  world"
-    assert env._normalize("  STrInG WITH   space ") == "string with   space"

@@ -40,6 +40,9 @@ class CodeReviewEnvironment(Environment):
         self._task_index = 0
         self._substep_index = 0
         self._total_score = 0.0
+        
+        # Auto-load first task so env is valid even without explicit reset
+        self._load_task(0)
 
     def reset(self, **kwargs) -> CodeReviewObservation:
         """Sync reset (fallback)."""

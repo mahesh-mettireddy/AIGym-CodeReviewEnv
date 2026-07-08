@@ -39,12 +39,12 @@ sequenceDiagram
 
 ## 📋 Task Matrices (100+ Snippets)
 
-| Task Configuration | Difficulty | Goal | Focus Areas |
-| :--- | :--- | :--- | :--- |
-| 🟢 **Easy** | `bug_detection` | Identify fatal bugs. | Race conditions, Mutable Defaults, ZeroDivision. |
-| 🟡 **Medium** | `code_smell` | Locate architectural odors. | God Objects, Magic Numbers, Law of Demeter. |
-| 🔴 **Hard** | `improvement` | Suggest O(N²)→O(N) refactors. | LRU Caching, Generators, Set Operations. |
-| 🟣 **Expert** | `security_vulnerability` | Identify critical security flaws. | SQLi, Path Traversal, Pickett RCE, Shell Injection. |
+| Task Configuration | Complexity | Task Name | Goal | Focus Areas |
+| :--- | :--- | :--- | :--- | :--- |
+| 🟢 **Easy** | `bug_detection` | Bug Detection | Identify fatal bugs. | Race conditions, Mutable Defaults, ZeroDivision. |
+| 🟡 **Medium** | `code_smell` | Code Smell | Locate architectural odors. | God Objects, Magic Numbers, Law of Demeter. |
+| 🔴 **Hard** | `improvement` | Improvement | Suggest O(N²)→O(N) refactors. | LRU Caching, Generators, Set Operations. |
+| 🟣 **Expert** | `security_vulnerability` | Security Flaw | Identify critical security flaws. | SQLi, Path Traversal, Pickett RCE, Shell Injection. |
 
 ## ⚙️ Core Interfaces
 

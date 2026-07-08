@@ -11,9 +11,11 @@ class BaseCodeReviewGrader(Rubric):
 
     def _get_confidence_multiplier(self, confidence: float, is_correct: bool) -> float:
         """
-        Adjust reward based on agent confidence.
-        High Confidence + Wrong = Penalty.
-        Low Confidence + Right = Smaller Reward (hesitancy).
+        Adjust reward based on agent confidence (from CodeReviewAction.confidence).
+        This directly impacts the final environment reward:
+        - High Confidence + Wrong = Significant Penalty (-0.2x).
+        - Low Confidence + Right = Hesitancy Penalty (0.7x).
+        - High Confidence + Right = Decisive Bonus (1.1x).
         """
         # Ensure confidence is a float
         try:
@@ -50,7 +52,8 @@ class BugDetectionGrader(BaseCodeReviewGrader):
         is_binary_correct = (has_bug and said_yes) or (not has_bug and "no" in verdict)
         
         if not is_binary_correct:
-            return 0.01 + self._get_confidence_multiplier(conf_raw, False)
+            penalty_reward = 0.01 + self._get_confidence_multiplier(conf_raw, False)
+            return max(0.01, min(0.99, penalty_reward))
 
         # 2. Slow Path: Semantic Judge for Nuance
         try:
